@@ -1,6 +1,6 @@
-# Проект ассистент кинотеатра
+# Проект "Ассистент кинотеатра"
 
-**Цель работы** - реализация микросервисной архитектуры **"Кинотеатр"**.
+**Цель работы** - реализовать интеграцию между сервисом поиска фильмов и голосовым помощником.
 
 * * *
 
@@ -64,11 +64,11 @@ docker compose -f ./docker-compose-apps.yaml -f ./docker-compose-services.yaml -
 - LoginHistory: история авторизации пользователя;
 - SocialAccount.
 
-Ссылка на схему БД:
+Cхемы БД:
 ![scheme](docs/postgres/postgres_auth.png)
 ![scheme](docs/postgres/postgres_content.png)
 
-## Схемы индексов Elasticsearch
+## Схема индексов Elasticsearch
 ![scheme](docs/elastic/elastic_index.png)
 
 * * *
