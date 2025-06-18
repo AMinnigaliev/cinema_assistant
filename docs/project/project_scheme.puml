@@ -1,0 +1,57 @@
+@startuml
+!theme reddress-lightorange
+' Подключаем C4-PlantUML через includeurl
+!define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
+!includeurl C4P/C4_Container.puml
+
+' Клиентская часть
+Person(client, "Клиент", "Веб или Мобильное приложение")
+
+' Серверная часть
+System_Boundary(backend, "Backend") {
+    ' Входная точка
+    Container(api_gateway, "API Gateway", "Gateway", "Точка входа для всех запросов")
+
+    ' Голосовой сервис
+    Container(voice_service, "Voice-сервис", "Service", "Обработка аудио ↔ текст")
+
+    ' Сервис авторизации
+    Container(auth_service, "Auth-сервис", "FastAPI", "Выдача, проверка и валидация токенов доступа")
+
+    ' Сервис кинотеатра
+    Container(movies_service, "Movies-сервис", "FastAPI", "Поиск контента кинотеатра")
+
+    ' Сервис ETL контента
+    Container(etl, "ETL-сервис", "Python + Scheduler", "Перенос контента из PostgreSQL в Elasticsearch")
+
+    ' Хранилища данных
+    ContainerDb(redis, "Redis", "In-memory Key-Value Store", "Кеш контента и состояния токенов")
+    ContainerDb(postgres, "PostgreSQL", "Relational Database", "Хранение контента и пользователей")
+    ContainerDb(elastic, "Elasticsearch", "Search engine", "Поиск контента")
+}
+
+' Взаимодействия клиента
+Rel(client, api_gateway, "Голосовой запрос", "Websocket")
+
+' Взаимодействия gateway
+Rel(api_gateway, voice_service, "Голосовой запрос", "HTTP")
+Rel(api_gateway, auth_service, "Проверка токена", "HTTP")
+Rel(api_gateway, postgres, "Данные голосового поиска", "SQLAlchemy Async")
+
+' Взаимодействия voice
+Rel(voice_service, movies_service, "Поиск контента", "HTTP")
+Rel(voice_service, postgres, "Данные голосового поиска", "SQLAlchemy Async")
+
+' Взаимодействия подсистемы movies
+Rel(movies_service, redis, "Кеш контента", "Redis protocol")
+Rel(movies_service, elastic, "Выполняет полнотекстовый поиск контента", "HTTP/JSON")
+
+' Взаимодействия подсистемы auth
+Rel(auth_service, redis, "Состояние токенов", "Redis protocol")
+Rel(auth_service, postgres, "CRUD пользователей", "SQLAlchemy Async")
+
+' Взаимодействие подсистемы etl
+Rel(etl, postgres, "Читает контент пачками", "SQLAlchemy Async")
+Rel(etl, elastic, "Индексация контента", "Async HTTP/Batch")
+
+@enduml
