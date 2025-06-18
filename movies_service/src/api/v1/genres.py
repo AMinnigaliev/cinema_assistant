@@ -4,7 +4,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from src.dependencies.auth import role_dependency
 from src.models.models import GenreBase
 from src.schemas.user_role_enum import UserRoleEnum
 from src.services.genre_service import GenreService, get_genre_service
@@ -17,7 +16,6 @@ router = APIRouter()
 @router.get(
     "/search",
     response_model=list[GenreBase],
-    dependencies=[Depends(role_dependency(UserRoleEnum.get_all_roles()))],
 )
 async def search_genres(
     query: str | None = Query(None, description="Поисковый запрос по жанрам"),
@@ -56,7 +54,6 @@ async def get_genres(
 @router.get(
     "/{genre_id}",
     response_model=GenreBase,
-    dependencies=[Depends(role_dependency(UserRoleEnum.get_all_roles()))],
 )
 async def genre_details(
     genre_id: UUID,

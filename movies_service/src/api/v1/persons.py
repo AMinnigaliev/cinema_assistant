@@ -4,16 +4,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from src.dependencies.auth import role_dependency
 from src.models.models import FilmBase, Person
 from src.schemas.user_role_enum import UserRoleEnum
 from src.services.person_service import PersonService, get_person_service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(
-    dependencies=[Depends(role_dependency(UserRoleEnum.get_all_roles()))],
-)
+router = APIRouter()
 
 
 @router.get("/search", response_model=list[Person])

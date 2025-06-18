@@ -1,12 +1,13 @@
 import logging
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Depends
 from fastapi.responses import ORJSONResponse
 
 from src.api.v1 import films, genres, healthcheck, persons
 from src.core.config import settings
 from src.db.elastic import get_elastic
 from src.db.redis_client import get_redis_cache
+from src.dependencies.request_id import get_request_id
 from src.middleware import AsyncRateLimitMiddleware
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ app = FastAPI(
     docs_url='/api/v1/movies/openapi',
     openapi_url='/api/v1/movies/openapi.json',
     default_response_class=ORJSONResponse,
+    dependencies=[Depends(get_request_id)]
 )
 
 # Route-внешние (используются пользователями)
