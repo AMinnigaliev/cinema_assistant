@@ -50,6 +50,29 @@ services:
     networks:
       - sec_network
 
+  etl_service:
+    build:
+      context: ./etl_service
+    container_name: etl_service
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      elasticsearch:
+        condition: service_started
+    networks:
+      - sec_network
+
+  assistant_ner_model:
+    build:
+      context: ./assistant_ner_model
+    container_name: assistant_ner_model
+    env_file: .env
+    networks:
+      - sec_network
+
   redis:
     image: redis:6.2
     container_name: ${REDIS_HOST}
@@ -113,21 +136,6 @@ services:
       - pg_data:/var/lib/postgresql/data
     env_file:
       - .env
-    networks:
-      - sec_network
-
-  etl_service:
-    build:
-      context: ./etl_service
-    container_name: etl_service
-    env_file: .env
-    depends_on:
-      postgres:
-        condition: service_started
-      redis:
-        condition: service_started
-      elasticsearch:
-        condition: service_started
     networks:
       - sec_network
 
