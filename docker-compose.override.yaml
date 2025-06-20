@@ -1,0 +1,5 @@
+services:
+  nlp_clickhouse:
+    ports:
+      - "${NLP_CLICKHOUSE_HTTP_PORT}:8123"
+      - "${NLP_CLICKHOUSE_TCP_PORT}:9000"
