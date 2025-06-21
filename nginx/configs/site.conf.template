@@ -1,4 +1,6 @@
-
+upstream backend_auth {
+    server ${AUTH_SERVICE_HOST}:${AUTH_SERVICE_PORT};
+}
 
 upstream backend_movies {
     server ${MOVIES_SERVICE_HOST}:${MOVIES_SERVICE_PORT};
@@ -9,6 +11,32 @@ server {
     server_name  _;
 
     root /data;
+
+    # Проксируем весь трафик на /auth (включая /auth/social/login/yandex)
+    location /auth/ {
+        proxy_pass http://backend_auth/auth/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Проксируем запросы для oauth Yandex
+    location /auth/social/login/yandex {
+        proxy_pass http://backend_auth/auth/social/login/yandex;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /api/v1/auth {
+        proxy_pass http://backend_auth/api/v1/auth;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Request-Id $request_id;
+    }
 
     location /api/v1/movies {
         proxy_pass http://backend_movies/api/v1/movies;
