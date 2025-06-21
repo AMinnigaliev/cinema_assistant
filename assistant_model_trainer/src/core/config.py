@@ -11,15 +11,15 @@ class NLPConfig(BaseSettings):
     base_dir: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     num_iter: int = Field(default=30, alias="NLP_NUM_ITER")
-    output_dir_path: str = Field(default=os.path.join(base_dir, "movie_ner_model"))
+    output_dir_path: str = os.path.join(base_dir, "movie_ner_model")
 
-    model_name: str = Field(default="ru_core_news_sm")
-    model_drop: float = Field(default=0.2)
-    ner_pipe: str = Field(default="ner")
-    rule_pipe: str = Field(default="entity_ruler")
+    model_name: str = "ru_core_news_sm"
+    model_drop: float = 0.2
+    ner_pipe: str = "ner"
+    rule_pipe: str = "entity_ruler"
 
     pattern_path: str = Field(default=os.path.join(base_dir, "train_patterns.json"))
-    ner_labels: list[str] = Field(default=["MOVIE"])
+    ner_labels: list[str] = ["MOVIE"]
     is_resume_training: bool = Field(default=True, alias="NLP_IS_RESUME_TRAINING")
 
     ner_task_trigger: str = Field(default="interval", alias="NER_TASK_TRIGGER")

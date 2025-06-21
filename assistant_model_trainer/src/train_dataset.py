@@ -8,10 +8,10 @@ from models.clickhouse_models import NERTrainingData
 
 def get_train_dataset() -> list:
     with clickhouse_session.context_session() as clickhouse_session_:
-        datetime_t = datetime.today().replace(hour=0, minute=0, second=0)
+        datetime_t = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
         datetime_str = datetime.strftime(datetime_t, "%Y-%m-%d %H:%M:%S")
 
-        ner_trainings_data = clickhouse_session_.select(  # TODO:
+        ner_trainings_data = clickhouse_session_.select(
             query=(
                 f"SELECT * FROM nertrainingdata WHERE nertrainingdata.timestamp >= '{datetime_str}' "
                 f"AND nertrainingdata.status = 'approved'"
