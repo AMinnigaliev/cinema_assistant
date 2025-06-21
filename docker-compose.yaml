@@ -61,6 +61,18 @@ services:
     networks:
       - sec_network
 
+  nlu_voice_service:
+    build:
+      context: ./nlu_voice_service
+    container_name: nlu_voice_service
+    env_file: .env
+    depends_on:
+      - movies_service
+    volumes:
+      - ./voice_files:/app/voice_files  # Монтированная директория для хранения голосовых аудиофайлов
+    networks:
+      - sec_network
+
   etl_service:
     build:
       context: ./etl_service
