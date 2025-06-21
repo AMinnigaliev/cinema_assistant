@@ -161,6 +161,19 @@ services:
     networks:
       - sec_network
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ${RABBITMQ_HOST}
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    env_file:
+      - .env
+    networks:
+      - sec_network
+
 networks:
   sec_network:
     driver: bridge
@@ -170,3 +183,4 @@ volumes:
   pg_data:
   static_media_volume:
   clickhouse_data:
+  rabbitmq_data:
