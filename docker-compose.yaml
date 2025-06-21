@@ -50,10 +50,55 @@ services:
     networks:
       - sec_network
 
+  assistant_model_trainer:
+    build:
+      context: ./assistant_model_trainer
+    container_name: assistant_model_trainer
+    env_file: .env
+    depends_on:
+      nlp_clickhouse:
+        condition: service_healthy
+    networks:
+      - sec_network
+
+  etl_service:
+    build:
+      context: ./etl_service
+    container_name: etl_service
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      elasticsearch:
+        condition: service_started
+    networks:
+      - sec_network
+
+  nlp_clickhouse:
+    image: clickhouse/clickhouse-server:25.4.2
+    container_name: ${NLP_CLICKHOUSE_HOST}
+    env_file:
+      - .env
+    environment:
+      - CLICKHOUSE_DB=$NLP_CLICKHOUSE_DB
+      - CLICKHOUSE_USER=$NLP_CLICKHOUSE_USER
+      - CLICKHOUSE_PASSWORD=$NLP_CLICKHOUSE_PASSWORD
+    healthcheck:
+      test: wget --spider -q http://localhost:8123 || exit 1
+      interval: 5s
+      timeout: 2s
+      retries: 10
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    networks:
+      - sec_network
+
   redis:
     image: redis:6.2
     container_name: ${REDIS_HOST}
-    command: ["redis-server", "--port", "${REDIS_PORT}", "--requirepass", "${REDIS_PASSWORD}"]
+    command: [ "redis-server", "--port", "${REDIS_PORT}", "--requirepass", "${REDIS_PASSWORD}" ]
     restart: unless-stopped
     expose:
       - "${REDIS_PORT}"
@@ -99,7 +144,7 @@ services:
       POSTGRES_DB: ${PG_NAME}
       POSTGRES_USER: ${PG_USER}
       POSTGRES_PASSWORD: ${PG_PASSWORD}
-    command: ["postgres", "-c", "listen_addresses=*", "-c", "port=${PG_PORT}"]
+    command: [ "postgres", "-c", "listen_addresses=*", "-c", "port=${PG_PORT}" ]
     expose:
       - "${PG_PORT}"
     healthcheck:
@@ -113,21 +158,6 @@ services:
       - pg_data:/var/lib/postgresql/data
     env_file:
       - .env
-    networks:
-      - sec_network
-
-  etl_service:
-    build:
-      context: ./etl_service
-    container_name: etl_service
-    env_file: .env
-    depends_on:
-      postgres:
-        condition: service_started
-      redis:
-        condition: service_started
-      elasticsearch:
-        condition: service_started
     networks:
       - sec_network
 

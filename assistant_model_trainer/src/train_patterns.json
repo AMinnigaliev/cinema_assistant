@@ -1,0 +1,16 @@
+[
+  {
+    "label": "MOVIE",
+    "pattern": [
+      {"LOWER": "фильм"},
+      {"IS_TITLE": true}
+    ]
+  },
+  {
+    "label": "MOVIE",
+    "pattern": [
+      {"LOWER": "фильм"},
+      {"IS_TITLE": true, "OP": "+"}
+    ]
+  }
+]

@@ -70,3 +70,7 @@ Thumbs.db
 
 cleanup_docker.sh
 create_test_structure.sh
+
+# Исключение файлов отслеживания и логирования
+logs
+logs/
