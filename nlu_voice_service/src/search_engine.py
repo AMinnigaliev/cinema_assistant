@@ -9,13 +9,20 @@ from models import IncomingVoiceData, OutgoingVoiceData
 from assistant_model_worker import AssistantModelWorkerMixin
 
 
-class IncomingVoiceSearchEngine(STTMixin, TTSMixin, AssistantModelWorkerMixin):
+class VoiceSearchEngine(STTMixin, TTSMixin, AssistantModelWorkerMixin):
+    """Класс по поиску запрашиваемой информации (фильмов) из входящего аудиофайла."""
 
     def __init__(self, incoming_d: dict[str, str]) -> None:
         self._incoming_voice_d = IncomingVoiceData(**incoming_d)
 
     @property
     def get_not_found_voice_path(self) -> str:
+        """
+        Получение аудиофайла "По вашему запросу ничего не найдено."
+
+        @rtype: str
+        @return:
+        """
         if not os.path.exists(config.not_found_voice_path):
             self._gen_not_found_tts()
 
@@ -39,6 +46,14 @@ class IncomingVoiceSearchEngine(STTMixin, TTSMixin, AssistantModelWorkerMixin):
         return outgoing_voice_d
 
     async def _find_entities_by_prediction(self, prediction: dict[str, list[str]]) -> dict[str, list[str]]:
+        """
+        Поиск запрашиваемых из входящего аудиофайла сущностей (фильмов) в movies_service.
+
+        @type prediction: dict[str, list[str]]
+        @param prediction: Извлеченные из входящего аудиофайла запросы на поиск сущностей.
+        @rtype found_entities: list[dict[str, str | Any]]
+        @return found_entities:
+        """
         found_entities = dict()
 
         if requested_movies := prediction.get(config.movie_label):
@@ -55,6 +70,14 @@ class IncomingVoiceSearchEngine(STTMixin, TTSMixin, AssistantModelWorkerMixin):
         return found_entities
 
     async def _get_movies_by_titles(self, movies: list[str]) -> list[str]:
+        """
+        Поиск фильмов из входящего аудиофайла в movies_service.
+
+        @type movies: list[str]
+        @param movies: Наименования запрашиваемых фильмов.
+        @rtype: list[str]
+        @return:
+        """
         query_data = {"search": movies[0], "page_size": 3, "page_number": 1}  # TODO: movies[0]
 
         try:

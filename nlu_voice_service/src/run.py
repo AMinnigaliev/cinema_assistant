@@ -9,10 +9,20 @@ from aio_pika.abc import AbstractExchange
 
 from core import config, logger
 from core.custom_exceprions import SearchEngineError
-from search_engine import IncomingVoiceSearchEngine
+from search_engine import VoiceSearchEngine
 
 
 async def on_message(message: IncomingMessage, default_exchange: AbstractExchange) -> None:
+    """
+    Обработчик входящих сообщений от RMQ-rpc клиента.
+
+    @type message: IncomingMessage
+    @param message:
+    @type default_exchange: AbstractExchange
+    @param default_exchange:
+    @rtype:
+    @return:
+    """
     async with message.process():
         if message.reply_to is None:
             logger.error("[!] No reply_to in message, cannot send response")
@@ -22,7 +32,7 @@ async def on_message(message: IncomingMessage, default_exchange: AbstractExchang
             start_t = time.perf_counter()
             incoming_d = json.loads(message.body.decode())
 
-            search_engine = IncomingVoiceSearchEngine(incoming_d=incoming_d)
+            search_engine = VoiceSearchEngine(incoming_d=incoming_d)
             result = await search_engine.run()
 
         except SearchEngineError as ex:
@@ -48,7 +58,13 @@ async def on_message(message: IncomingMessage, default_exchange: AbstractExchang
                 f"time_execution: {time.perf_counter() - start_t:.4f} sec."
             )
 
-async def main():
+async def main() -> None:
+    """
+    Точка входа в запуск RMQ-rpc сервер.
+
+    @rtype:
+    @return:
+    """
     connection = await connect_robust(config.get_rabbitmq_url())
     channel = await connection.channel()
 

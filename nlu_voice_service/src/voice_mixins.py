@@ -9,6 +9,7 @@ from models import IncomingVoiceData
 
 
 class STTMixin:
+    """Mixin - speech to text операция."""
 
     @staticmethod
     def gen_stt(voice_data: IncomingVoiceData) -> str | None:
@@ -31,6 +32,7 @@ class STTMixin:
 
 
 class TTSMixin:
+    """Mixin - text to speech операция."""
 
     @staticmethod
     def gen_tts(found_entities: dict[str, list[str]], user_id: str) -> tuple[str, str]:
