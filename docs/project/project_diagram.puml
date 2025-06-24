@@ -1,0 +1,31 @@
+@startuml
+skinparam sequence {
+  ActorBorderColor #E26A6A
+  ParticipantBorderColor #E26A6A
+  LifeLineBorderColor #000000
+  ArrowColor #000000
+  FontSize 14
+}
+
+participant Client as client
+participant "API Gateway" as api_gateway
+participant "Auth Service" as auth_service
+participant "Voice Service" as voice_service
+participant "Movies Service" as movie_service
+
+client -> api_gateway : 1. Голосовой запрос
+
+api_gateway -> auth_service : 2. Проверка токена
+
+auth_service --> api_gateway : 3. Результат проверки
+
+api_gateway -> voice_service : 4. Получить ответ на голосовой запрос
+
+voice_service -> movie_service : 5. Поиск контента
+
+movie_service --> voice_service : 6. Найденный контент
+
+voice_service -> api_gateway : 7. Голосовой ответ
+
+api_gateway --> client : 8. Голосовой ответ
+@enduml
