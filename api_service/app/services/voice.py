@@ -1,27 +1,28 @@
-import httpx, json, time
-from app.core.logger import logger
-from uuid import UUID
 from pathlib import Path
-from app.core.config import settings
+from datetime import datetime
+from uuid import uuid4
 
-async def send_to_voice_service(audio_path: Path, request_id: str, user_id: str, language: str):
+from app.core.config import settings
+from app.services.clickhouse_client import insert_request
+from app.services.rabbitmq import publish_voice_request
+
+
+async def send_to_voice_service(audio_path: Path, request_id: str, user_id: str) -> None:
+    correlation_id = str(uuid4())
+
+    insert_request(
+        user_id=user_id,
+        request_id=request_id,
+        correlation_id=correlation_id,
+        stt_file_path=str(audio_path),
+    )
+
     metadata = {
         "request_id": request_id,
         "user_id": user_id,
-        "language": language,
-        "audio_format": {
-            "codec": "pcm_s16le",
-            "sample_rate": 16000,
-            "channels": 1
-        },
-        "timestamp": int(time.time())
+        "correlation_id": correlation_id,
+        "reply_to": settings.RABBITMQ_RESPONSE_QUEUE,
+        "incoming_voice_path": audio_path.name,
     }
-    files = {
-        "audio": (audio_path.name, open(audio_path, "rb"), "audio/wav"),
-        "metadata": ("metadata.json", json.dumps(metadata), "application/json")
-    }
-    async with httpx.AsyncClient() as client:
-        logger.info(f"Sending audio {audio_path.name} to voice_service")
-        response = await client.post(settings.VOICE_SERVICE_URL, files=files)
-        logger.info(f"Received response from voice_service: {response.status_code}")
-        response.raise_for_status()
+
+    await publish_voice_request(metadata)
