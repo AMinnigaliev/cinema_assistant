@@ -1,0 +1,2 @@
+{"label":"MOVIE","pattern":[{"LOWER":"\u0444\u0438\u043b\u044c\u043c"},{"IS_TITLE":true}]}
+{"label":"MOVIE","pattern":[{"LOWER":"\u0444\u0438\u043b\u044c\u043c"},{"IS_TITLE":true,"OP":"+"}]}
