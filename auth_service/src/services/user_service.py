@@ -102,9 +102,13 @@ class UserService:
                 detail="Login already registered",
             )
 
-        norm_country, partition_country = self._get_normalize_country(
-            user_data.country
-        )
+        if user_data.country:
+            norm_country, partition_country = self._get_normalize_country(
+                user_data.country
+            )
+        else:
+            norm_country = None
+            partition_country = None
 
         new_user = User(
             first_name=user_data.first_name,

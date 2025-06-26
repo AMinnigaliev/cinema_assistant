@@ -1,0 +1,14 @@
+FROM python:3.10-slim
+
+WORKDIR /tests/functional
+
+ENV PYTHONPATH=/tests/functional
+
+RUN groupadd -r tester && useradd -d /tests/functional -r -g tester tester
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
+
+COPY --chown=tester:tester ./functional .
+
+USER tester

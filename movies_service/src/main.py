@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, FastAPI, Depends
+from fastapi import APIRouter, FastAPI
 from fastapi.responses import ORJSONResponse
 
 from src.api.v1 import films, genres, healthcheck, persons
@@ -18,7 +18,6 @@ app = FastAPI(
     docs_url='/api/v1/movies/openapi',
     openapi_url='/api/v1/movies/openapi.json',
     default_response_class=ORJSONResponse,
-    dependencies=[Depends(get_request_id)]
 )
 
 # Route-внешние (используются пользователями)

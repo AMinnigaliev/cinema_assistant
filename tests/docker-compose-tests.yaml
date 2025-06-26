@@ -1,0 +1,22 @@
+services:
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.tests
+    container_name: tests_app
+    depends_on:
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    command: pytest --rootdir=/app /tests/functional
+    entrypoint: >
+      sh -c "python3 utils/wait_for_redis.py
+      && python3 utils/wait_for_pg.py
+      && python3 utils/wait_for_es.py
+      && python3 utils/wait_for_service.py
+      && pytest ./src/auth/"
