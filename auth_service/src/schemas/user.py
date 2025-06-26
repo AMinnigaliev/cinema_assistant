@@ -28,8 +28,7 @@ class BaseUser(BaseModel):
         ..., min_length=1, max_length=100, description="Страна пользователя"
     )
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 
 class UserUpdate(BaseUser):
@@ -45,14 +44,14 @@ class UserUpdate(BaseUser):
         None, min_length=1, max_length=100, description="Страна пользователя"
     )
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 
 class UserResponse(BaseUser):
     id: UUID = Field(..., description="Уникальный идентификатор пользователя")
     email: EmailStr | None = Field(description="Email пользователя")
     username: str = Field(..., description="Логин пользователя", alias="login")
+    role: str = Field(..., description="Роль пользователя")
     created_at: datetime = Field(
         ..., description="Дата и время создания аккаунта"
     )

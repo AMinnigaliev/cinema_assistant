@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.responses import ORJSONResponse
 from sqlalchemy import text
 
@@ -19,7 +19,6 @@ app = FastAPI(
     docs_url='/api/v1/auth/openapi',
     openapi_url='/api/v1/auth/openapi.json',
     default_response_class=ORJSONResponse,
-    dependencies=[Depends(get_request_id)],
 )
 
 # Route-внешние (используются пользователями)

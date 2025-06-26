@@ -1,0 +1,68 @@
+@startuml
+' Combined PostgreSQL schema diagram
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #0366D6
+  FontColor #0366D6
+}
+
+package "content" {
+  class FilmWork {
+    + id: UUID (PK)
+    + created: timestamptz
+    + modified: timestamptz
+    + title: varchar(255)
+    + description: text
+    + creation_date: date
+    + rating: float
+    + type: varchar(7)
+  }
+  note right of FilmWork
+    INDEX creation_date, rating
+    ORDER BY creation_date DESC
+  end note
+
+  class Genre {
+    + id: UUID (PK)
+    + name: varchar(255)
+    + description: text
+    + created: timestamptz
+    + modified: timestamptz
+  }
+
+  class Person {
+    + id: UUID (PK)
+    + full_name: varchar(255)
+    + created: timestamptz
+    + modified: timestamptz
+  }
+
+  class GenreFilmWork {
+    + id: UUID (PK)
+    + created: timestamptz
+    + film_work_id: UUID (FK → FilmWork.id)
+    + genre_id: UUID (FK → Genre.id)
+  }
+  note right of GenreFilmWork
+    Unique(film_work_id, genre_id)
+  end note
+
+  class PersonFilmWork {
+    + id: UUID (PK)
+    + created: timestamptz
+    + role: varchar(10)
+    + film_work_id: UUID (FK → FilmWork.id)
+    + person_id: UUID (FK → Person.id)
+  }
+  note right of PersonFilmWork
+    Unique(film_work_id, person_id, role)
+  end note
+
+  FilmWork <-- GenreFilmWork : genres_rel
+  Genre <-- GenreFilmWork : genre_link
+  FilmWork <-- PersonFilmWork : persons_rel
+  Person <-- PersonFilmWork : person_link
+  FilmWork <-- Genre : genres
+  FilmWork <-- Person : persons
+}
+@enduml
