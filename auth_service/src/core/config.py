@@ -43,12 +43,6 @@ class Settings(BaseSettings):
     redis_password: str = Field(default="password", alias="REDIS_PASSWORD")
     redis_rate_limit_db: int = Field(default=2, alias="REDIS_RATE_LIMIT_DB")
 
-    elastic_host: str = Field(default="elasticsearch", alias="ELASTIC_HOST")
-    elastic_port: int = Field(default=9200, alias="ELASTIC_PORT")
-    elastic_scheme: str = Field(default="http", alias="ELASTIC_SCHEME")
-    elastic_name: str = Field(default="elastic", alias="ELASTIC_USERNAME")
-    elastic_password: str = Field(default="123qwe", alias="ES_PASSWORD")
-
     pg_user: str = Field(default="user", alias="PG_USER")
     pg_password: str = Field(default="password", alias="PG_PASSWORD")
     pg_host: str = Field(default="postgres", alias="PG_HOST")

@@ -54,17 +54,8 @@ class Settings(BaseSettings):
     elastic_name: str = Field(default="elastic", alias="ELASTIC_USERNAME")
     elastic_password: str = Field(default="password", alias="ELASTIC_PASSWORD")
 
-    pg_user: str = Field(default="user", alias="PG_USER")
-    pg_password: str = Field(default="password", alias="PG_PASSWORD")
-    pg_host: str = Field(default="postgres", alias="PG_HOST")
-    pg_port: int = Field(default=5432, alias="PG_PORT")
-    pg_name: str = Field(default="name", alias="PG_NAME")
-
     elastic_exceptions: Any = (ESApiError, ESTransportError)
     redis_exceptions: Any = (RedisError,)
-    pg_exceptions: Any = (
-        PostgresError, PGConnectionDoesNotExistError, PGSyntaxOrAccessError
-    )
 
     # Безопасность
     login_url: str = "/api/v1/auth/users/login"

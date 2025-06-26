@@ -1,0 +1,49 @@
+services:
+  redis:
+    image: redis:6.2
+    container_name: ${REDIS_HOST}
+    command: ["redis-server", "--port", "${REDIS_PORT}", "--requirepass", "${REDIS_PASSWORD}"]
+    restart: unless-stopped
+    expose:
+      - "${REDIS_PORT}"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-p", "${REDIS_PORT}", "--raw", "-a", "${REDIS_PASSWORD}", "ping" ]
+      interval: 3s
+      timeout: 2s
+      retries: 2
+
+  elasticsearch:
+    image: elasticsearch:8.6.2
+    container_name: ${ELASTIC_HOST}
+    environment:
+      - ES_LOG_LEVEL=ERROR
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - http.port=${ELASTIC_PORT}
+      - ELASTIC_USERNAME=$ELASTIC_USERNAME
+      - ELASTIC_PASSWORD=$ELASTIC_PASSWORD
+    expose:
+      - "${ELASTIC_PORT}"
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s ${ELASTIC_SCHEME}://${ELASTIC_HOST}:${ELASTIC_PORT} >/dev/null || exit 1" ]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: ${PG_HOST}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PG_NAME}
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+    command: ["postgres", "-c", "listen_addresses=*", "-c", "port=${PG_PORT}"]
+    expose:
+      - "${PG_PORT}"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_NAME}" ]
+      interval: 10s
+      retries: 5
+      timeout: 10s

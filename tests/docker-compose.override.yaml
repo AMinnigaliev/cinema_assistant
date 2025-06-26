@@ -1,0 +1,20 @@
+services:
+  redis:
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+
+  elasticsearch:
+    ports:
+      - "${ELASTIC_PORT}:${ELASTIC_PORT}"
+
+  postgres:
+    ports:
+      - "${PG_PORT}:${PG_PORT}"
+
+  auth_service:
+    ports:
+      - "${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}"
+
+  movies_service:
+    ports:
+      - "${MOVIES_SERVICE_PORT}:${MOVIES_SERVICE_PORT}"
