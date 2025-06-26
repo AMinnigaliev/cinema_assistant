@@ -1,0 +1,62 @@
+@startuml
+' Elasticsearch index mappings diagram
+
+skinparam class {
+  BackgroundColor<<Index>> #FFFFFF
+  BorderColor<<Index>> #0366D6
+  FontColor<<Index>> #0366D6
+}
+
+' FilmWork index
+class FilmWork <<Index>> {
+  + settings: refresh_interval = 1s, analyzer = ru_en
+  + mappings: dynamic = strict
+  --
+  + id: keyword
+  + imdb_rating: float
+  + title: text (analyzer = ru_en, fields.raw = keyword)
+  + description: text (analyzer = ru_en)
+  + directors_names: text (analyzer = ru_en)
+  + actors_names: text (analyzer = ru_en)
+  + writers_names: text (analyzer = ru_en)
+  + genres: nested (strict) { id: keyword, name: text (analyzer = ru_en) }
+  + directors: nested (strict) { id: keyword, full_name: text (analyzer = ru_en) }
+  + actors: nested (strict) { id: keyword, full_name: text (analyzer = ru_en) }
+  + writers: nested (strict) { id: keyword, full_name: text (analyzer = ru_en) }
+}
+
+note right of FilmWork
+Analyzer: ru_en
+- Tokenizer: standard
+- Filters:
+  - lowercase
+  - english_stop, stemmer, possessive_stemmer
+  - russian_stop, stemmer
+end note
+
+' Genre index
+class Genre <<Index>> {
+  + settings: refresh_interval = 1s, analyzer = ru_en
+  + mappings: dynamic = strict
+  --
+  + id: keyword
+  + name: text (analyzer = ru_en, fields.raw = keyword)
+  + description: text (analyzer = ru_en)
+}
+
+' Person index
+class Person <<Index>> {
+  + settings: refresh_interval = 1s, analyzer = ru_en
+  + mappings: dynamic = strict
+  --
+  + id: keyword
+  + full_name: text (analyzer = ru_en, fields.raw = keyword)
+  + films: nested (strict) { id: keyword, roles: text (analyzer = ru_en) }
+}
+
+' Relationships
+FilmWork --> Genre : genres
+FilmWork --> Person : directors, actors, writers
+Person --> FilmWork : films
+
+@enduml

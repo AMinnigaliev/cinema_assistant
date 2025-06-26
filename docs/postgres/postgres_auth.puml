@@ -1,0 +1,61 @@
+@startuml
+' Combined PostgreSQL schema diagram
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #0366D6
+  FontColor #0366D6
+}
+
+package "auth" {
+  class Users {
+    + id: UUID (PK, partition_country)
+    + login: varchar(100)
+    + password: varchar(255)
+    + email: varchar(255)
+    + oauth_id: varchar(255)
+    + first_name: varchar(100)
+    + last_name: varchar(100)
+    + created_at: timestamptz
+    + role: userroleenum
+    + is_active: boolean
+    + country: varchar(100)
+    + partition_country: varchar(10)
+  }
+  note right of Users
+    PK: (id, partition_country)
+    PARTITION BY LIST(partition_country)
+  end note
+
+  class LoginHistory {
+    + id: UUID (PK, user_device_type)
+    + user_id: UUID (FK → Users.id)
+    + login_time: timestamptz
+    + user_agent: varchar(512)
+    + user_device_type: varchar(20)
+    + partition_country: varchar(10)
+  }
+  note right of LoginHistory
+    PK: (id, user_device_type)
+    FK: (user_id, partition_country) → Users
+    PARTITION BY LIST(user_device_type)
+  end note
+
+  class SocialAccounts {
+    + id: UUID (PK)
+    + provider: varchar(50)
+    + oauth_id: varchar(255)
+    + email: varchar(255)
+    + username: varchar(255)
+    + linked_at: timestamptz
+    + user_id: UUID (FK → Users.id)
+    + partition_country: varchar(10)
+  }
+  note right of SocialAccounts
+    FK: (user_id, partition_country) → Users
+    Unique(provider, oauth_id)
+  end note
+
+  Users <-- LoginHistory : has_history
+  Users <-- SocialAccounts : has_social
+}
+@enduml
