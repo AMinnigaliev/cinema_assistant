@@ -1,6 +1,5 @@
-from collections import defaultdict
-
 import spacy
+from spacy.tokens import Span
 
 from core import config, logger
 
@@ -9,30 +8,41 @@ class AssistantModelWorkerMixin:
     """Mixin - работа с NLP-моделью."""
 
     @staticmethod
-    def named_entity_recognition(text: str | None) -> dict[str, list[str]] | None:
+    def named_entity_recognition(text: str | None) -> dict[str, str] | None:
         """
         Обработка входящего текста, поиск по label.
 
         @type text: str | None
         @param text:
-        @rtype ents_by_types: dict[str, list[str]] | None
-        @return ents_by_types:
+        @rtype ent_by_types: dict[str, str] | None
+        @return ent_by_types:
         """
         if text:
             nlp = spacy.load(config.model_dir_path)
             doc = nlp(text)
 
-            ents_by_types = defaultdict(list)
+            ent_by_types = dict()
             for ent in doc.ents:
-                if ent.label_ in config.model_labels:
-                    ents_by_types[ent.label_].append(ent.text)
+                if ent.label_ == config.movie_label and ent.text.lower().startswith("фильм "):
+                    offset = 1 if doc[ent.start].lower_ == "фильм" else 0  #  Смещение спана, для пропуска слова 'фильм'
 
-            if ents_by_types:
-                logger.debug(f"[NLP] found entities by types: {ents_by_types}")
+                    # Проверка, в случае, если нет названия фильма
+                    if offset and ent.start + offset < ent.end:
+                        new_ent = Span(doc, ent.start + offset, ent.end, label=ent.label)
+                        ent_by_types[ent.label_]= new_ent.text
+
+                    break
+
+                elif ent.label_ == config.movie_label and not ent.text.lower().startswith("фильм "):
+                    ent_by_types[ent.label_] = ent.text
+                    break
+
+            if ent_by_types:
+                logger.debug(f"[NLP] found entity by types: {ent_by_types}")
 
             else:
                 logger.debug(f"[NLP] not found entities by text: {text}")
 
-            return ents_by_types
+            return ent_by_types
 
         return None
