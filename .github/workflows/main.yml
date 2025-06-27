@@ -1,0 +1,150 @@
+name: Main cinema assistant workflow
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Pull service images
+        run: |
+          docker compose \
+            -f tests/docker-compose-apps.yaml \
+            -f tests/docker-compose-services.yaml \
+            -f tests/docker-compose-tests.yaml pull
+
+      - name: Run tests via Docker Compose
+        id: run_tests
+        run: |
+          docker compose \
+            -f tests/docker-compose-apps.yaml \
+            -f tests/docker-compose-services.yaml \
+            -f tests/docker-compose-tests.yaml up \
+            --abort-on-container-exit \
+            --exit-code-from tests
+
+      - name: Collect test container logs
+        if: failure()
+        run: |
+          mkdir -p tests/functional/logs
+          docker compose \
+            -f tests/docker-compose-apps.yaml \
+            -f tests/docker-compose-services.yaml \
+            -f tests/docker-compose-tests.yaml logs tests > tests/functional/logs/tests.log
+
+      - name: Tear down
+        if: always()
+        run: |
+          docker compose \
+            -f tests/docker-compose-apps.yaml \
+            -f tests/docker-compose-services.yaml \
+            -f tests/docker-compose-tests.yaml down -v
+
+      - name: Upload Test Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: './tests/functional/**/logs/**/*.log'
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install lint dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install wemake-python-styleguide==1.1.0 flake8-html==0.4.3
+
+      - name: Prepare reports directory
+        run: mkdir -p reports/flake8
+
+      - name: Run wemake-python-styleguide (HTML report)
+        run: flake8 . --format=html --htmldir=reports/flake8
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flake8-report
+          path: reports/flake8/
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    if: always()
+
+    steps:
+      - name: Determine target URL
+        id: target_url
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            url="https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+          else
+            url="https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+          fi
+          echo "::set-output name=url::$url"
+
+      - name: Build notification header
+        id: header
+        run: |
+          if [ "${{ needs.test.result }}" == "success" ] && [ "${{ needs.lint.result }}" == "success" ]; then
+            header="✅ Все проверки выполнены успешно."
+          else
+            header=""
+            if [ "${{ needs.test.result }}" != "success" ]; then
+              header="${header}❌ Тесты не пройдены. "
+            fi
+            if [ "${{ needs.lint.result }}" != "success" ]; then
+              header="${header}❌ Линтинг не пройден."
+            fi
+          fi
+          echo "::set-output name=header::$header"
+
+      - name: Build notification body
+        id: body
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            body="• Из: ${{ github.event.pull_request.head.ref }} -> ${{ github.event.pull_request.base.ref }}"
+          else
+            body="• Ветка: ${{ github.ref_name }}"
+          fi
+          # Убираем лишний перевод строки в конце:
+          body="${body%\\n}"
+          echo "::set-output name=body::$body"
+
+      - name: Send Telegram notification
+        uses: appleboy/telegram-action@master
+        with:
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          to:    ${{ secrets.TELEGRAM_TO }}
+          message: |
+            ${{ steps.header.outputs.header }}
+            • Репозиторий: ${{ github.repository }}
+            • Событие: ${{ github.event_name }}
+            ${{ steps.body.outputs.body }}
+            • Автор: ${{ github.actor }}
+            • Коммит: ${{ github.event.commits[0].message }}
+            • Ссылка: ${{ steps.target_url.outputs.url }}

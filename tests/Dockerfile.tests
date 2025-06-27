@@ -11,4 +11,7 @@ RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r re
 
 COPY --chown=tester:tester ./functional .
 
+RUN mkdir -p /tests/functional/.pytest_cache && chown -R tester:tester /tests/functional/.pytest_cache
+RUN chown -R tester:tester /tests/functional
+
 USER tester
