@@ -111,18 +111,29 @@ jobs:
         id: header
         run: |
           if [ "${{ needs.test.result }}" == "success" ] && [ "${{ needs.lint.result }}" == "success" ]; then
-            header="✅ Все проверки выполнены успешно.\n"
+            header="✅ Все проверки выполнены успешно."
           else
             header=""
             if [ "${{ needs.test.result }}" != "success" ]; then
-              header="${header}❌ Тесты не пройдены.\n"
+              header="${header}❌ Тесты не пройдены. "
             fi
             if [ "${{ needs.lint.result }}" != "success" ]; then
-              header="${header}❌ Линтинг не пройден.\n"
+              header="${header}❌ Линтинг не пройден."
             fi
           fi
-          header="${header%\\n}"
           echo "::set-output name=header::$header"
+
+      - name: Build notification body
+        id: body
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            body="• Из: ${{ github.event.pull_request.head.ref }} -> ${{ github.event.pull_request.base.ref }}"
+          else
+            body="• Ветка: ${{ github.ref_name }}"
+          fi
+          # Убираем лишний перевод строки в конце:
+          body="${body%\\n}"
+          echo "::set-output name=body::$body"
 
       - name: Send Telegram notification
         uses: appleboy/telegram-action@master
@@ -133,7 +144,7 @@ jobs:
             ${{ steps.header.outputs.header }}
             • Репозиторий: ${{ github.repository }}
             • Событие: ${{ github.event_name }}
-            ${{ github.event_name == 'pull_request' && format('• Откуда (source): {0}\\n• Куда (target): {1}', github.event.pull_request.head.ref, github.event.pull_request.base.ref) || format('• Ветка: {0}', github.ref_name) }}
+            ${{ steps.body.outputs.body }}
             • Автор: ${{ github.actor }}
             • Коммит: ${{ github.event.commits[0].message }}
             • Ссылка: ${{ steps.target_url.outputs.url }}
