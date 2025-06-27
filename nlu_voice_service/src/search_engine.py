@@ -18,7 +18,7 @@ class VoiceSearchEngine(STTMixin, TTSMixin, AssistantModelWorkerMixin):
             self._incoming_voice_d = IncomingVoiceData(**incoming_d)
 
         except ValidationError as ex:
-            raise SearchEngineError(message=f"not valid incoming data: {ex.errors()}")
+            raise SearchEngineError(message=f"not valid incoming data: {ex.errors()}", code="incoming-data-error")
 
     async def get_not_found_voice_path(self) -> str:
         """
@@ -60,9 +60,7 @@ class VoiceSearchEngine(STTMixin, TTSMixin, AssistantModelWorkerMixin):
         """
         found_entities = dict()
 
-        if requested_movie := prediction.get(config.movie_label):
-            movie = requested_movie.removeprefix("фильм ") if requested_movie.startswith("фильм ") else requested_movie  # TODO: требуется правка модели (убрать слово 'фильм')
-
+        if movie := prediction.get(config.movie_label):
             if movies_by_titles := await self._get_movies_by_titles(movie=movie):
                 found_entities[config.movie_label] = movies_by_titles
 
@@ -77,7 +75,7 @@ class VoiceSearchEngine(STTMixin, TTSMixin, AssistantModelWorkerMixin):
         @rtype: list[str]
         @return:
         """
-        query_data = {"search": movie, "page_size": 3, "page_number": 1}
+        query_data = {"query": movie, "page_size": 3, "page_number": 1}
 
         try:
             async with aiohttp.ClientSession() as session:

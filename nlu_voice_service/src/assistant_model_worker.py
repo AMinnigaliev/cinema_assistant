@@ -1,4 +1,5 @@
 import spacy
+from spacy.tokens import Span
 
 from core import config, logger
 
@@ -22,8 +23,19 @@ class AssistantModelWorkerMixin:
 
             ent_by_types = dict()
             for ent in doc.ents:
-                if ent.label_ in config.model_labels:
+                if ent.label_ == config.movie_label and ent.text.lower().startswith("фильм "):
+                    offset = 1 if doc[ent.start].lower_ == "фильм" else 0  #  Смещение спана, для пропуска слова 'фильм'
+
+                    # Проверка, в случае, если нет названия фильма
+                    if offset and ent.start + offset < ent.end:
+                        new_ent = Span(doc, ent.start + offset, ent.end, label=ent.label)
+                        ent_by_types[ent.label_]= new_ent.text
+
+                    break
+
+                elif ent.label_ == config.movie_label and not ent.text.lower().startswith("фильм "):
                     ent_by_types[ent.label_] = ent.text
+                    break
 
             if ent_by_types:
                 logger.debug(f"[NLP] found entity by types: {ent_by_types}")
