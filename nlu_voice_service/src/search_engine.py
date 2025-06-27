@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import aiohttp
+from pydantic import ValidationError
 
 from core import config, SearchEngineError, logger
 from voice_mixins import STTMixin, TTSMixin
@@ -13,10 +14,13 @@ class VoiceSearchEngine(STTMixin, TTSMixin, AssistantModelWorkerMixin):
     """Класс по поиску запрашиваемой информации (фильмов) из входящего аудиофайла."""
 
     def __init__(self, incoming_d: dict[str, str]) -> None:
-        self._incoming_voice_d = IncomingVoiceData(**incoming_d)
+        try:
+            self._incoming_voice_d = IncomingVoiceData(**incoming_d)
 
-    @property
-    def get_not_found_voice_path(self) -> str:
+        except ValidationError as ex:
+            raise SearchEngineError(message=f"not valid incoming data: {ex.errors()}")
+
+    async def get_not_found_voice_path(self) -> str:
         """
         Получение аудиофайла "По вашему запросу ничего не найдено."
 
@@ -24,18 +28,18 @@ class VoiceSearchEngine(STTMixin, TTSMixin, AssistantModelWorkerMixin):
         @return:
         """
         if not os.path.exists(config.not_found_voice_path):
-            self._gen_not_found_tts()
+            await self._gen_not_found_tts()
 
         return config.not_found_voice_path
 
     async def run(self) -> dict[str, str]:
-        out_voice_path = self.get_not_found_voice_path
-        in_voice_stt = self.gen_stt(voice_data=self._incoming_voice_d)
+        out_voice_path = await self.get_not_found_voice_path()
+        in_voice_stt = await self.gen_stt(voice_data=self._incoming_voice_d)
 
         out_text = config.tts_not_found_response
         if prediction := self.named_entity_recognition(text=in_voice_stt):
             if found_entities := await self._find_entities_by_prediction(prediction=prediction):
-                out_voice_path, out_text = self.gen_tts(
+                out_voice_path, out_text = await self.gen_tts(
                     found_entities=found_entities,
                     user_id=self._incoming_voice_d.user_id,
                 )
@@ -45,7 +49,7 @@ class VoiceSearchEngine(STTMixin, TTSMixin, AssistantModelWorkerMixin):
 
         return outgoing_voice_d
 
-    async def _find_entities_by_prediction(self, prediction: dict[str, list[str]]) -> dict[str, list[str]]:
+    async def _find_entities_by_prediction(self, prediction: dict[str, str]) -> dict[str, list[str]]:
         """
         Поиск запрашиваемых из входящего аудиофайла сущностей (фильмов) в movies_service.
 
@@ -56,29 +60,24 @@ class VoiceSearchEngine(STTMixin, TTSMixin, AssistantModelWorkerMixin):
         """
         found_entities = dict()
 
-        if requested_movies := prediction.get(config.movie_label):
-            movies_for_search = list()  # TODO: требуется правка модели (убрать слово 'фильм')
-            for movie in requested_movies:
-                if movie.startswith("фильм "):
-                    movie = movie.removeprefix("фильм ")
+        if requested_movie := prediction.get(config.movie_label):
+            movie = requested_movie.removeprefix("фильм ") if requested_movie.startswith("фильм ") else requested_movie  # TODO: требуется правка модели (убрать слово 'фильм')
 
-                movies_for_search.append(movie)
-
-            if movies_by_titles := await self._get_movies_by_titles(movies=movies_for_search):
+            if movies_by_titles := await self._get_movies_by_titles(movie=movie):
                 found_entities[config.movie_label] = movies_by_titles
 
         return found_entities
 
-    async def _get_movies_by_titles(self, movies: list[str]) -> list[str]:
+    async def _get_movies_by_titles(self, movie: str) -> list[str]:
         """
         Поиск фильмов из входящего аудиофайла в movies_service.
 
-        @type movies: list[str]
-        @param movies: Наименования запрашиваемых фильмов.
+        @type movie: str
+        @param movie: Наименование запрашиваемого фильма.
         @rtype: list[str]
         @return:
         """
-        query_data = {"search": movies[0], "page_size": 3, "page_number": 1}  # TODO: movies[0]
+        query_data = {"search": movie, "page_size": 3, "page_number": 1}
 
         try:
             async with aiohttp.ClientSession() as session:
