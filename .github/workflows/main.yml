@@ -29,32 +29,6 @@ jobs:
 
       - name: Run tests via Docker Compose
         id: run_tests
-        env:
-          AUTH_SERVICE_HOST: auth_service
-          AUTH_SERVICE_PORT: 8000
-          MOVIES_SERVICE_HOST: movies_service
-          MOVIES_SERVICE_PORT: 8000
-          REDIS_HOST: redis
-          REDIS_PORT: 6379
-          REDIS_PASSWORD: password
-          REDIS_RATE_LIMIT_DB: 3
-          ELASTIC_HOST: elastic
-          ELASTIC_PORT: 9200
-          ELASTIC_SCHEME: http
-          ELASTIC_USERNAME: elastic
-          ELASTIC_PASSWORD: password
-          PG_NAME: name
-          PG_USER: user
-          PG_PASSWORD: password
-          PG_PORT: 5432
-          PG_HOST: postgres
-          SUPERUSER_NAME: superuser
-          SUPERUSER_PASSWORD: password
-          SECRET_KEY: secret
-          YANDEX_CLIENT_ID: 1
-          YANDEX_CLIENT_SECRET: secret
-          YANDEX_REDIRECT_URI: some_url
-          RATE_LIMIT: 100
         run: |
           docker compose \
             -f tests/docker-compose-apps.yaml \
@@ -102,9 +76,10 @@ jobs:
       - name: Install lint dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install \
-            wemake-python-styleguide==1.1.0 \
-            flake8-html==0.3.0
+          pip install wemake-python-styleguide==1.1.0 flake8-html==0.4.3
+
+      - name: Prepare reports directory
+        run: mkdir -p reports/flake8
 
       - name: Run wemake-python-styleguide (HTML report)
         run: flake8 . --format=html --htmldir=reports/flake8
@@ -132,47 +107,33 @@ jobs:
           fi
           echo "::set-output name=url::$url"
 
-      - name: Notify Telegram on all-success
-        if: needs.test.result == 'success' && needs.lint.result == 'success'
-        uses: appleboy/telegram-action@master
-        with:
-          token: ${{ secrets.TELEGRAM_TOKEN }}
-          to:    ${{ secrets.TELEGRAM_TO }}
-          message: |
-            ✅ Все проверки выполнены успешно.
-            • Репозиторий: ${{ github.repository }}
-            • Событие: ${{ github.event_name }}
-            • Ветка: ${{ github.ref_name }}
-            • Автор: ${{ github.actor }}
-            • Сообщение коммита: ${{ github.event.commits[0].message }}
-            • Ссылка: ${{ steps.target_url.outputs.url }}
+      - name: Build notification header
+        id: header
+        run: |
+          if [ "${{ needs.test.result }}" == "success" ] && [ "${{ needs.lint.result }}" == "success" ]; then
+            header="✅ Все проверки выполнены успешно.\n"
+          else
+            header=""
+            if [ "${{ needs.test.result }}" != "success" ]; then
+              header="${header}❌ Тесты не пройдены.\n"
+            fi
+            if [ "${{ needs.lint.result }}" != "success" ]; then
+              header="${header}❌ Линтинг не пройден.\n"
+            fi
+          fi
+          header="${header%\\n}"
+          echo "::set-output name=header::$header"
 
-      - name: Notify Telegram on test failure
-        if: needs.test.result != 'success'
+      - name: Send Telegram notification
         uses: appleboy/telegram-action@master
         with:
           token: ${{ secrets.TELEGRAM_TOKEN }}
           to:    ${{ secrets.TELEGRAM_TO }}
           message: |
-            ❌ Тесты не пройдены.
+            ${{ steps.header.outputs.header }}
             • Репозиторий: ${{ github.repository }}
             • Событие: ${{ github.event_name }}
-            • Ветка: ${{ github.ref_name }}
+            ${{ github.event_name == 'pull_request' && format('• Откуда (source): {0}\\n• Куда (target): {1}', github.event.pull_request.head.ref, github.event.pull_request.base.ref) || format('• Ветка: {0}', github.ref_name) }}
             • Автор: ${{ github.actor }}
-            • Сообщение коммита: ${{ github.event.commits[0].message }}
-            • Ссылка: ${{ steps.target_url.outputs.url }}
-
-      - name: Notify Telegram on lint failure
-        if: needs.lint.result != 'success'
-        uses: appleboy/telegram-action@master
-        with:
-          token: ${{ secrets.TELEGRAM_TOKEN }}
-          to:    ${{ secrets.TELEGRAM_TO }}
-          message: |
-            ❌ Линтинг не пройден.
-            • Репозиторий: ${{ github.repository }}
-            • Событие: ${{ github.event_name }}
-            • Ветка: ${{ github.ref_name }}
-            • Автор: ${{ github.actor }}
-            • Сообщение коммита: ${{ github.event.commits[0].message }}
+            • Коммит: ${{ github.event.commits[0].message }}
             • Ссылка: ${{ steps.target_url.outputs.url }}

@@ -13,7 +13,7 @@ services:
         condition: service_healthy
     env_file:
       - .env
-    command: pytest --rootdir=/app /tests/functional
+    command: pytest /tests/functional
     entrypoint: >
       sh -c "python3 utils/wait_for_redis.py
       && python3 utils/wait_for_pg.py
