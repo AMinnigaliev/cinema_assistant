@@ -1,0 +1,180 @@
+name: Main cinema assistant workflow
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+  workflow_dispatch:
+    inputs:
+      run_tests:
+        description: 'Run the full CI'
+        required: false
+        default: 'true'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Pull service images
+        run: |
+          docker compose \
+            -f tests/docker-compose-apps.yaml \
+            -f tests/docker-compose-services.yaml \
+            -f tests/docker-compose-tests.yaml pull
+
+      - name: Run tests via Docker Compose
+        id: run_tests
+        env:
+          AUTH_SERVICE_HOST: auth_service
+          AUTH_SERVICE_PORT: 8000
+          MOVIES_SERVICE_HOST: movies_service
+          MOVIES_SERVICE_PORT: 8000
+          REDIS_HOST: redis
+          REDIS_PORT: 6379
+          REDIS_PASSWORD: password
+          REDIS_RATE_LIMIT_DB: 3
+          ELASTIC_HOST: elastic
+          ELASTIC_PORT: 9200
+          ELASTIC_SCHEME: http
+          ELASTIC_USERNAME: elastic
+          ELASTIC_PASSWORD: password
+          PG_NAME: name
+          PG_USER: user
+          PG_PASSWORD: password
+          PG_PORT: 5432
+          PG_HOST: postgres
+          SUPERUSER_NAME: superuser
+          SUPERUSER_PASSWORD: password
+          SECRET_KEY: secret
+          YANDEX_CLIENT_ID: 1
+          YANDEX_CLIENT_SECRET: secret
+          YANDEX_REDIRECT_URI: some_url
+          RATE_LIMIT: 100
+        run: |
+          docker compose \
+            -f tests/docker-compose-apps.yaml \
+            -f tests/docker-compose-services.yaml \
+            -f tests/docker-compose-tests.yaml up \
+            --abort-on-container-exit \
+            --exit-code-from tests
+
+      - name: Collect test container logs
+        if: failure()
+        run: |
+          mkdir -p tests/functional/logs
+          docker compose \
+            -f tests/docker-compose-apps.yaml \
+            -f tests/docker-compose-services.yaml \
+            -f tests/docker-compose-tests.yaml logs tests > tests/functional/logs/tests.log
+
+      - name: Tear down
+        if: always()
+        run: |
+          docker compose \
+            -f tests/docker-compose-apps.yaml \
+            -f tests/docker-compose-services.yaml \
+            -f tests/docker-compose-tests.yaml down -v
+
+      - name: Upload Test Logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-logs
+          path: './tests/functional/**/logs/**/*.log'
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install lint dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install \
+            wemake-python-styleguide==0.21.0 \
+            flake8-html==0.3.0
+
+      - name: Run wemake-python-styleguide (HTML report)
+        run: flake8 . --format=html --htmldir=reports/flake8
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: flake8-report
+          path: reports/flake8/
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    if: always()
+
+    steps:
+      - name: Determine target URL
+        id: target_url
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "url=https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+          else
+            echo "url=https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+          fi
+          echo "::set-output name=url::$(cat <<< "$url")"
+
+      - name: Notify Telegram on all-success
+        if: needs.test.result == 'success' && needs.lint.result == 'success'
+        uses: appleboy/telegram-action@master
+        with:
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          to:    ${{ secrets.TELEGRAM_TO }}
+          message: |
+            ✅ Все проверки выполнены успешно.
+            • Репозиторий: ${{ github.repository }}
+            • Событие: ${{ github.event_name }}
+            • Автор: ${{ github.actor }}
+            • Сообщение коммита: ${{ github.event.commits[0].message }}
+            • Ссылка: ${{ steps.target_url.outputs.url }}
+
+      - name: Notify Telegram on test failure
+        if: needs.test.result != 'success'
+        uses: appleboy/telegram-action@master
+        with:
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          to:    ${{ secrets.TELEGRAM_TO }}
+          message: |
+            ❌ Тесты не пройдены.
+            • Репозиторий: ${{ github.repository }}
+            • Событие: ${{ github.event_name }}
+            • Автор: ${{ github.actor }}
+            • Сообщение коммита: ${{ github.event.commits[0].message }}
+            • Ссылка: ${{ steps.target_url.outputs.url }}
+
+      - name: Notify Telegram on lint failure
+        if: needs.lint.result != 'success'
+        uses: appleboy/telegram-action@master
+        with:
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          to:    ${{ secrets.TELEGRAM_TO }}
+          message: |
+            ❌ Linting failed.
+            • Репозиторий: ${{ github.repository }}
+            • Событие: ${{ github.event_name }}
+            • Автор: ${{ github.actor }}
+            • Сообщение коммита: ${{ github.event.commits[0].message }}
+            • Ссылка: ${{ steps.target_url.outputs.url }}
