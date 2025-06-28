@@ -5,7 +5,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.models.models import GenreBase
-from src.schemas.user_role_enum import UserRoleEnum
 from src.services.genre_service import GenreService, get_genre_service
 
 logger = logging.getLogger(__name__)
