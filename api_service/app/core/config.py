@@ -1,32 +1,33 @@
 from pathlib import Path
-from pydantic import BaseSettings, Field
+from pydantic import BaseSettings
 
 
 class Settings(BaseSettings):
-    INCOMING_FILE_PATH: Path = Field(default=Path("/voice_files/incoming"))
-    OUTGOING_FILE_PATH: Path = Field(default=Path("/voice_files/outgoing"))
+    """Конфигурация Voice-API (читается из переменных окружения)."""
 
-    RABBITMQ_USER: str = Field(default="user")
-    RABBITMQ_PASSWORD: str = Field(default="password")
-    RABBITMQ_HOST: str = Field(default="rabbitmq")
-    RABBITMQ_PORT: int = Field(default=5672)
-    RABBITMQ_INCOMING_QUEUE: str = Field(default="voice_assistant_request")
-    RABBITMQ_RESPONSE_QUEUE: str = Field(default="voice_assistant_response")
+    # Файловая система
+    incoming_file_path: Path = Path("/voice_files/incoming")
+    outgoing_file_path: Path = Path("/voice_files/outgoing")
 
-    CLICKHOUSE_HOST: str = Field(default="nlp_clickhouse")
-    CLICKHOUSE_PORT: int = Field(default=9000)
-    CLICKHOUSE_DATABASE: str = Field(default="nlp_database")
-    CLICKHOUSE_USER: str = Field(default="clickhouse")
-    CLICKHOUSE_PASSWORD: str = Field(default="password")
+    # RabbitMQ
+    rabbitmq_user: str = "user"
+    rabbitmq_password: str = "password"
+    rabbitmq_host: str = "rabbitmq"
+    rabbitmq_port: int = 5672
+    rabbitmq_incoming_queue: str = "voice_assistant_request"
+    rabbitmq_response_queue: str = "voice_assistant_response"
 
-    def rabbitmq_url(self) -> str:
-        return (
-            f"amqp://{self.RABBITMQ_USER}:{self.RABBITMQ_PASSWORD}"
-            f"@{self.RABBITMQ_HOST}:{self.RABBITMQ_PORT}/"
-        )
+    # ClickHouse
+    clickhouse_host: str = "nlp_clickhouse"
+    clickhouse_port: int = 9000
+    clickhouse_database: str = "nlp_database"
+    clickhouse_user: str = "clickhouse"
+    clickhouse_password: str = "password"
 
     class Config:
         env_file = ".env"
+        env_prefix = "VOICE_API_"
+        case_sensitive = False
 
 
-settings = Settings()
+settings = Settings() 

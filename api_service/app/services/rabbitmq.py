@@ -6,20 +6,24 @@ from aio_pika import connect_robust, Message
 from aio_pika.abc import AbstractIncomingMessage
 
 from app.core.config import settings
+from app.dependencies.rabbitmq_config import get_rabbitmq_url
 from app.services.clickhouse_client import insert_response
 
 
 async def publish_voice_request(metadata: dict) -> None:
-    conn = await connect_robust(settings.rabbitmq_url())
+    """
+    Шлём сообщение в очередь «voice_assistant_request».
+    """
+    conn = await connect_robust(get_rabbitmq_url())
     async with conn.channel() as ch:
         await ch.default_exchange.publish(
             Message(
-                body=json.dumps(metadata).encode(),
+                json.dumps(metadata).encode(),
+                content_type="application/json",
                 correlation_id=metadata["correlation_id"],
-                reply_to=metadata["reply_to"],
                 delivery_mode=2,
             ),
-            routing_key=settings.RABBITMQ_INCOMING_QUEUE,
+            routing_key=settings.rabbitmq_incoming_queue,
         )
     await conn.close()
 
@@ -37,6 +41,7 @@ async def _on_response(message: AbstractIncomingMessage) -> None:
             found_entities=payload.get("found_entities"),
         )
 
+        # убираем tts-файл, если он был сохранён на диске ASR-сервиса
         if p := payload.get("output_voice_path"):
             f = Path(p)
             if f.exists():
@@ -47,12 +52,17 @@ async def _on_response(message: AbstractIncomingMessage) -> None:
 
 
 async def start_response_consumer() -> None:
+    """
+    Держим persistent-соединение, потребляем очередь с распознанными ответами.
+    """
     loop = asyncio.get_event_loop()
-    conn = await connect_robust(settings.rabbitmq_url(), loop=loop)
+    conn = await connect_robust(get_rabbitmq_url(), loop=loop)
     ch = await conn.channel()
     await ch.set_qos(prefetch_count=10)
-    q = await ch.declare_queue(settings.RABBITMQ_RESPONSE_QUEUE, durable=True)
+
+    q = await ch.declare_queue(settings.rabbitmq_response_queue, durable=True)
     await q.consume(_on_response)
+
     loop.create_task(_keep_alive(conn))
 
 
