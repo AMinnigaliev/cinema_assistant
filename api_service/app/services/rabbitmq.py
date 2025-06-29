@@ -1,38 +1,38 @@
-import asyncio
 import json
+import logging.config
 from pathlib import Path
 
-from aio_pika import connect_robust, Message
+from aio_pika import Message
 from aio_pika.abc import AbstractIncomingMessage
 
 from app.core.config import settings
-from app.dependencies.rabbitmq_config import get_rabbitmq_url
+from app.core.logger import LOGGING
+from app.db.rebbitmq import get_rabbit_connect, get_rabbit_publish_channel
 from app.services.clickhouse_client import insert_response
+
+logging.config.dictConfig(LOGGING)
+logger = logging.getLogger(__name__)
 
 
 async def publish_voice_request(metadata: dict) -> None:
-    """
-    Шлём сообщение в очередь «voice_assistant_request».
-    """
-    conn = await connect_robust(get_rabbitmq_url())
-    async with conn.channel() as ch:
-        await ch.default_exchange.publish(
-            Message(
-                json.dumps(metadata).encode(),
-                content_type="application/json",
-                correlation_id=metadata["correlation_id"],
-                delivery_mode=2,
-            ),
-            routing_key=settings.rabbitmq_incoming_queue,
-        )
-    await conn.close()
+    """Шлём сообщение в очередь «voice_assistant_request»."""
+    ch = await get_rabbit_publish_channel()
+    await ch.default_exchange.publish(
+        Message(
+            json.dumps(metadata).encode(),
+            content_type="application/json",
+            correlation_id=metadata["correlation_id"],
+            delivery_mode=2,
+        ),
+        routing_key=settings.rabbitmq_incoming_queue,
+    )
 
 
 async def _on_response(message: AbstractIncomingMessage) -> None:
     async with message.process():
         payload = json.loads(message.body)
 
-        insert_response(
+        await insert_response(
             user_id=payload["user_id"],
             request_id=payload["request_id"],
             correlation_id=payload.get("correlation_id"),
@@ -53,22 +53,16 @@ async def _on_response(message: AbstractIncomingMessage) -> None:
 
 async def start_response_consumer() -> None:
     """
-    Держим persistent-соединение, потребляем очередь с распознанными ответами.
+    Инициализирует Robust‑consumer для очереди ответов.
+    Подписка сохраняется и автоматически восстанавливается при разрывах
+    соединения.
     """
-    loop = asyncio.get_event_loop()
-    conn = await connect_robust(get_rabbitmq_url(), loop=loop)
+    conn = await get_rabbit_connect()
     ch = await conn.channel()
     await ch.set_qos(prefetch_count=10)
-
-    q = await ch.declare_queue(settings.rabbitmq_response_queue, durable=True)
-    await q.consume(_on_response)
-
-    loop.create_task(_keep_alive(conn))
-
-
-async def _keep_alive(conn):
-    try:
-        while True:
-            await asyncio.sleep(3600)
-    finally:
-        await conn.close()
+    queue = await ch.declare_queue(
+        settings.rabbitmq_response_queue,
+        durable=True,
+    )
+    await queue.consume(_on_response, no_ack=False)
+    logger.info("Robust consumer для очереди '%s' инициализирован", queue.name)

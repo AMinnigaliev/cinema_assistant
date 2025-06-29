@@ -1,20 +1,13 @@
-from uuid import uuid4
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+from uuid import uuid4
 
-from fastapi import (
-    APIRouter,
-    UploadFile,
-    File,
-    Form,
-    BackgroundTasks,
-    Depends,
-    HTTPException,
-)
+from fastapi import (APIRouter, BackgroundTasks, Depends, File, Form,
+                     HTTPException, UploadFile)
 
+from app.core.config import settings
 from app.dependencies.auth import get_current_user
 from app.services.voice import send_to_voice_service
-from app.core.config import settings
 
 router = APIRouter()
 

@@ -6,13 +6,15 @@ from app.services.clickhouse_client import insert_request
 from app.services.rabbitmq import publish_voice_request
 
 
-async def send_to_voice_service(audio_path: Path, request_id: str, user_id: str) -> None:
+async def send_to_voice_service(
+    audio_path: Path, request_id: str, user_id: str
+) -> None:
     """
     Сохраняем факт запроса в ClickHouse и отправляем мета-данные в RabbitMQ.
     """
     correlation_id = str(uuid4())
 
-    insert_request(
+    await insert_request(
         user_id=user_id,
         request_id=request_id,
         correlation_id=correlation_id,
