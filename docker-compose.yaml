@@ -54,7 +54,7 @@ services:
       - sec_network
 
   movies_service:
-    build: movies_service
+    build: ./movies_service
     container_name: ${MOVIES_SERVICE_HOST}
     restart: unless-stopped
     expose:
@@ -126,18 +126,6 @@ services:
       retries: 10
     volumes:
       - clickhouse_data:/var/lib/clickhouse
-    networks:
-      - sec_network
-
-  api_service:
-    build: api_service
-    container_name: api_service
-    env_file: .env
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      nlp_clickhouse:
-        condition: service_healthy
     networks:
       - sec_network
 
