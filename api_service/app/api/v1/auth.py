@@ -1,9 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
-from app.services.auth import verify_token
+from fastapi import APIRouter, Depends
 
-router = APIRouter()
+from app.dependencies.auth import get_current_user
 
-@router.get("/check")
-async def check_token(authorization: str = Header(...)):
-    user = await verify_token(authorization)
-    return {"user_id": user["user_id"], "role": user["role"]}
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.get("/check", summary="Проверить токен")
+async def check_token(user=Depends(get_current_user)):
+    """
+    Эхо-ендпойнт: возвращает payload пользователя.
+    """
+    return {"user": user}

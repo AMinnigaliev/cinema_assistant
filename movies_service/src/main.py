@@ -7,7 +7,6 @@ from src.api.v1 import films, genres, healthcheck, persons
 from src.core.config import settings
 from src.db.elastic import get_elastic
 from src.db.redis_client import get_redis_cache
-from src.dependencies.request_id import get_request_id
 from src.middleware import AsyncRateLimitMiddleware
 
 logger = logging.getLogger(__name__)

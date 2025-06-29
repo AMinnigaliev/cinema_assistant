@@ -5,7 +5,6 @@ from typing import TypeVar
 from redis.asyncio import Redis
 from redis.exceptions import ConnectionError as RedisConnectionError
 
-from core import config
 from core.logger import logger
 from interface.storage.base import BaseStorage
 

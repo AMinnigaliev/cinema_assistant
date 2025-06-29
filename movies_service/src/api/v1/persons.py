@@ -5,7 +5,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.models.models import FilmBase, Person
-from src.schemas.user_role_enum import UserRoleEnum
 from src.services.person_service import PersonService, get_person_service
 
 logger = logging.getLogger(__name__)

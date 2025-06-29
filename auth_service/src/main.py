@@ -8,7 +8,6 @@ from src.api.v1 import healthcheck, user, user_role, validate
 from src.core.config import settings
 from src.db.postgres import async_session
 from src.db.redis_client import get_redis_auth
-from src.dependencies.request_id import get_request_id
 from src.middleware import AsyncRateLimitMiddleware
 
 logger = logging.getLogger(__name__)

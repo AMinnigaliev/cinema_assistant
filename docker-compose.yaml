@@ -13,6 +13,26 @@ services:
     depends_on:
       - auth_service
       - movies_service
+      - api_service
+    networks:
+      - sec_network
+
+  api_service:
+    build: ./api_service
+    container_name: ${API_SERVICE_HOST}
+    restart: unless-stopped
+    expose:
+      - "${API_SERVICE_PORT}"
+    env_file:
+      - .env
+    volumes:
+      - ./voice_files/incoming:/voice_files/incoming
+      - ./voice_files/outgoing:/voice_files/outgoing
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      nlp_clickhouse:
+        condition: service_healthy
     networks:
       - sec_network
 
@@ -22,6 +42,7 @@ services:
     restart: unless-stopped
     expose:
       - "${AUTH_SERVICE_PORT}"
+      - AUTH_SERVICE_URL=http://auth_service:${AUTH_SERVICE_PORT}
     depends_on:
       redis:
         condition: service_healthy
@@ -33,7 +54,7 @@ services:
       - sec_network
 
   movies_service:
-    build: movies_service
+    build: ./movies_service
     container_name: ${MOVIES_SERVICE_HOST}
     restart: unless-stopped
     expose:
@@ -53,6 +74,8 @@ services:
       context: ./assistant_model_trainer
     container_name: assistant_model_trainer
     env_file: .env
+    volumes:
+      - ./models/movie_ner_model:/app/movie_ner_model
     depends_on:
       nlp_clickhouse:
         condition: service_healthy
@@ -66,6 +89,7 @@ services:
     env_file: .env
     depends_on:
       - movies_service
+      - rabbitmq
     volumes:
       - ./voice_files:/app/voice_files  # Монтированная директория для хранения голосовых аудиофайлов
     networks:
@@ -173,14 +197,18 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: ${RABBITMQ_HOST}
+    container_name: rabbitmq
+    ports:
+      - "${RABBITMQ_AMQP_PORT}:5672"
+      - "${RABBITMQ_WEB_INTERFACE_PORT}:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    env_file:
-      - .env
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS}
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - sec_network
 
