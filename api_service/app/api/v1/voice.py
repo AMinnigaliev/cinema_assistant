@@ -1,25 +1,18 @@
-from uuid import uuid4
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+from uuid import uuid4
 
-from fastapi import (
-    APIRouter,
-    UploadFile,
-    File,
-    Form,
-    BackgroundTasks,
-    Depends,
-    HTTPException,
-    status,
-)
+from fastapi import (APIRouter, BackgroundTasks, Depends, File, Form,
+                     HTTPException, status, UploadFile)
 from fastapi.responses import FileResponse
 
-from app.dependencies.auth import get_current_user
-from app.services.voice import send_to_voice_service
 from app.core.config import settings
+from app.dependencies.auth import get_current_user
 from app.services.clickhouse_client import get_voice_request
+from app.services.voice import send_to_voice_service
 
 router = APIRouter(prefix="/api/v1/voice", tags=["voice"])
+
 
 # ---------- POST /request ----------
 @router.post(

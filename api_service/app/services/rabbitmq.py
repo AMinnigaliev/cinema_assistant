@@ -1,27 +1,22 @@
 import json
-import aio_pika
-from aio_pika import Message, DeliveryMode
+import logging.config
+
+from aio_pika import DeliveryMode, IncomingMessage, Message
 
 from app.core.config import settings
+from app.core.logger import LOGGING
+from app.db.rebbitmq import get_rabbit_connect, get_rabbit_publish_channel
 
-# теперь используем settings.rabbitmq_url
-_RABBIT_URL = settings.rabbitmq_url
-
-_channel: aio_pika.Channel | None = None
-
-
-async def _get_channel() -> aio_pika.Channel:
-    global _channel
-    if _channel and not _channel.is_closed:
-        return _channel
-    conn = await aio_pika.connect_robust(_RABBIT_URL)
-    _channel = await conn.channel()
-    return _channel
+logging.config.dictConfig(LOGGING)
+logger = logging.getLogger(__name__)
 
 
 async def publish_voice_request(metadata: dict) -> None:
-    ch = await _get_channel()
-    queue = await ch.declare_queue(settings.rabbitmq_request_queue, durable=True)
+    """Шлём сообщение в очередь «voice_assistant_request»."""
+    ch = await get_rabbit_publish_channel()
+    queue = await ch.declare_queue(
+        settings.rabbitmq_request_queue, durable=True
+    )
     await ch.default_exchange.publish(
         Message(
             body=json.dumps(metadata, ensure_ascii=False).encode(),
@@ -35,9 +30,9 @@ async def start_response_consumer(on_response=None) -> None:
     import asyncio, json
     from app.services.clickhouse_client import insert_response
 
-    conn = await aio_pika.connect_robust(_RABBIT_URL)
+    conn = await get_rabbit_connect()
     ch = await conn.channel()
-    q = await ch.declare_queue(settings.rabbitmq_response_queue, durable=True)
+    queue = await ch.declare_queue(settings.rabbitmq_response_queue, durable=True)
 
     async def _handler(payload):
         await insert_response(
@@ -48,15 +43,17 @@ async def start_response_consumer(on_response=None) -> None:
             tts_file_path=payload["tts_file_path"],
             found_entities=payload.get("found_entities"),
         )
-        wav = settings.incoming_file_path / payload.get("incoming_voice_path", "")
+        wav = settings.incoming_file_path / payload.get(
+            "incoming_voice_path", ""
+        )
         if wav.is_file(): wav.unlink(missing_ok=True)
 
     handler = on_response or _handler
 
-    async def _process(msg: aio_pika.IncomingMessage):
+    async def _process(msg: IncomingMessage):
         async with msg.process():
             payload = json.loads(msg.body)
             await handler(payload)
 
-    await q.consume(_process, no_ack=False)
+    await queue.consume(_process, no_ack=False)
     while True: await asyncio.sleep(3600)

@@ -1,8 +1,10 @@
 import os
+
 import httpx
 from fastapi import Depends, Header, HTTPException, status
 
 AUTH_URL = os.getenv("AUTH_SERVICE_URL", "http://auth_service:8000")
+
 
 async def get_current_user(
     authorization: str = Header(..., description="Bearer <JWT>"),

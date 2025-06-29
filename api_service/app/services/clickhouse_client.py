@@ -1,41 +1,17 @@
 import json
 from datetime import datetime
-from typing import Optional, Dict, Any
-from clickhouse_driver import Client
-from app.core.config import settings
+from typing import Any, Dict, Optional
 
-# синхронный клиент ClickHouse
-client = Client(
-    host=settings.clickhouse_host,
-    port=settings.clickhouse_port,
-    database=settings.clickhouse_database,
-    user=settings.clickhouse_user,
-    password=settings.clickhouse_password,
-)
+from app.db.clickhouse import get_clickhouse_client
 
-# создаём таблицу, если ещё нет
-client.execute("""
-CREATE TABLE IF NOT EXISTS voice_assistant_request (
-    user_id         String,
-    request_id      String,
-    correlation_id  String,
-    status          String,
-    transcription   String,
-    tts_file_path   String,
-    stt_file_path   String,
-    found_entities  String,
-    timestamp       DateTime
-) ENGINE = MergeTree()
-ORDER BY (user_id, request_id)
-TTL timestamp + INTERVAL 30 DAY
-""")
 
-def insert_request(
+async def insert_request(
     user_id: str,
     request_id: str,
     correlation_id: str,
     stt_file_path: str,
 ) -> None:
+    client = await get_clickhouse_client()
     client.execute(
         "INSERT INTO voice_assistant_request VALUES",
         [
@@ -53,7 +29,8 @@ def insert_request(
         ],
     )
 
-def insert_response(
+
+async def insert_response(
     user_id: str,
     request_id: str,
     correlation_id: str,
@@ -61,6 +38,7 @@ def insert_response(
     tts_file_path: str,
     found_entities: Optional[Dict[str, Any]] = None,
 ) -> None:
+    client = await get_clickhouse_client()
     client.execute(
         "INSERT INTO voice_assistant_request VALUES",
         [
@@ -78,11 +56,12 @@ def insert_response(
         ],
     )
 
-def get_voice_request(request_id: str) -> Optional[Any]:
+async def get_voice_request(request_id: str) -> Optional[Any]:
     """
     Забирает из ClickHouse самую свежую запись по request_id.
     Возвращает dict с полями таблицы или None, если ничего не найдено.
     """
+    client = await get_clickhouse_client()
     rows = client.execute(
         """
         SELECT
