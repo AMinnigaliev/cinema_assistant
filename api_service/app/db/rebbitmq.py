@@ -23,7 +23,7 @@ async def init_rabbit_conn(retries: int = 3, delay: int = 5) -> None:
     for attempt in range(1, retries + 1):
         try:
             conn = await connect_robust(
-                settings.rabbitmq_url(), reconnect_interval=delay
+                settings.rabbitmq_url, reconnect_interval=delay
             )
             logger.info(
                 "Соединение с RabbitMQ установленно после %d попытки", attempt

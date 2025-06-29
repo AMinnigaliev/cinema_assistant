@@ -32,7 +32,9 @@ async def start_response_consumer(on_response=None) -> None:
 
     conn = await get_rabbit_connect()
     ch = await conn.channel()
-    queue = await ch.declare_queue(settings.rabbitmq_response_queue, durable=True)
+    queue = await ch.declare_queue(
+        settings.rabbitmq_response_queue, durable=True
+    )
 
     async def _handler(payload):
         await insert_response(

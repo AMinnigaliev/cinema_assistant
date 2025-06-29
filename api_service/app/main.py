@@ -1,3 +1,4 @@
+import asyncio
 import logging.config
 
 from fastapi import FastAPI
@@ -31,7 +32,7 @@ async def on_startup() -> None:
     await init_clickhouse_client()
     await init_rabbit_conn()
     await init_publish_channel()
-    await start_response_consumer()
+    asyncio.create_task(start_response_consumer())
 
     logger.info("Все RabbitMQ‐ресурсы инициализированы.")
 
