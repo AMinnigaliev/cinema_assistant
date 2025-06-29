@@ -5,14 +5,15 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    """Конфигурация Voice-API (читается из переменных окружения)."""
+    """Конфигурация Voice-API."""
     project_name: str = Field(default="movies", alias="PROJECT_NAME")
 
     # Файловая система
-    incoming_file_path: Path = Path("/voice_files/incoming")
-    outgoing_file_path: Path = Path("/voice_files/outgoing")
+    incoming_file_path: Path = Field(default=Path("/voice_files/incoming"), alias="INCOMING_FILE_PATH")
+    outgoing_file_path: Path = Field(default=Path("/voice_files/outgoing"), alias="OUTGOING_FILE_PATH")
 
     # RabbitMQ
+    rabbitmq_connection_url: str | None = Field(default=None, alias="RABBITMQ_CONNECTION_URL")
     rabbitmq_user: str = Field(default="user", alias="RABBITMQ_USER")
     rabbitmq_password: str = Field(
         default="password", alias="RABBITMQ_PASS"
@@ -37,16 +38,21 @@ class Settings(BaseSettings):
         default="password", alias="NLP_CLICKHOUSE_PASSWORD"
     )
 
+    @property
     def rabbitmq_url(self) -> str:
+        """Собирает готовый URL подключения к RabbitMQ."""
+        if self.rabbitmq_connection_url:
+            return self.rabbitmq_connection_url
         return (
-            f"amqp://{self.rabbitmq_user}:{self.rabbitmq_password}"
-            f"@{self.rabbitmq_host}:{self.rabbitmq_port}/"
+            f"amqp://{self.rabbitmq_user}:"
+            f"{self.rabbitmq_password}@"
+            f"{self.rabbitmq_host}:{self.rabbitmq_port}/"
         )
 
     class Config:
         env_file = ".env"
-        env_prefix = "VOICE_API_"
+        env_file_encoding = "utf-8"
         case_sensitive = False
 
 
-settings = Settings()
+settings = Settings() 

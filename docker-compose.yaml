@@ -17,6 +17,25 @@ services:
     networks:
       - sec_network
 
+  api_service:
+    build: ./api_service
+    container_name: ${API_SERVICE_HOST}
+    restart: unless-stopped
+    expose:
+      - "${API_SERVICE_PORT}"
+    env_file:
+      - .env
+    volumes:
+      - ./voice_files/incoming:/voice_files/incoming
+      - ./voice_files/outgoing:/voice_files/outgoing
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      nlp_clickhouse:
+        condition: service_healthy
+    networks:
+      - sec_network
+
   auth_service:
     build: ./auth_service
     container_name: ${AUTH_SERVICE_HOST}
