@@ -12,7 +12,10 @@ from core.custom_exceprions import SearchEngineError
 from search_engine import VoiceSearchEngine
 
 
-async def on_message(message: IncomingMessage, default_exchange: AbstractExchange) -> None:
+async def on_message(
+    message: IncomingMessage,
+    default_exchange: AbstractExchange,
+) -> None:
     """
     Обработчик входящих сообщений от RMQ-rpc клиента.
 
@@ -37,11 +40,16 @@ async def on_message(message: IncomingMessage, default_exchange: AbstractExchang
 
         except SearchEngineError as ex:
             if file_name := incoming_d.get("incoming_voice_name"):
-                path = Path(str(os.path.join(config.incoming_file_path, file_name)))
+                path = Path(
+                    str(os.path.join(config.incoming_file_path, file_name)),
+                )
                 if path.exists():
                     path.unlink()
 
-            result = {"error": f"error_{config.service_name}", "message": ex.message, "code": ex.code}
+            result = {
+                "error": f"error_{config.service_name}",
+                "message": ex.message, "code": ex.code,
+            }
             logger.error(f"[!] SearchEngineError: {ex}")
 
         await default_exchange.publish(
@@ -54,9 +62,10 @@ async def on_message(message: IncomingMessage, default_exchange: AbstractExchang
 
         if not result.get("error"):
             logger.info(
-                f"[*] Sent reply, file_path={result.get('output_voice_path')}, "
-                f"time_execution: {time.perf_counter() - start_t:.4f} sec."
+                f"[*] Sent reply, file_path={result.get('output_voice_path')},"
+                f" time_execution: {time.perf_counter() - start_t:.4f} sec."
             )
+
 
 async def main() -> None:
     """
@@ -79,6 +88,7 @@ async def main() -> None:
     logger.info("[*] Awaiting RPC requests...")
 
     await asyncio.Future()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

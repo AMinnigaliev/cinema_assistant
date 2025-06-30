@@ -20,7 +20,8 @@ class NLPModelTrainer:
     def __init__(self):
         self._num_iter = nlp_config.num_iter
 
-        self._nlp: Language = spacy.load(nlp_config.get_load_base_model())  # Используем обученную модель
+        # Используем обученную модель
+        self._nlp: Language = spacy.load(nlp_config.get_load_base_model())
         self._ner: PipeCallable = self.__init_ner()
         self._optimizer: None | Optimizer = None
 
@@ -69,7 +70,10 @@ class NLPModelTrainer:
         @return ruler:
         """
         if nlp_config.rule_pipe not in self._nlp.pipe_names:
-            ruler: PipeCallable = self._nlp.add_pipe(nlp_config.rule_pipe, before=nlp_config.ner_pipe)
+            ruler: PipeCallable = self._nlp.add_pipe(
+                nlp_config.rule_pipe,
+                before=nlp_config.ner_pipe,
+            )
 
         else:
             ruler: PipeCallable = self._nlp.get_pipe(nlp_config.rule_pipe)
@@ -88,7 +92,11 @@ class NLPModelTrainer:
                 patterns = json.load(fp)
 
         except FileNotFoundError:
-            raise NLPModelTrainError(message=f"File with patterns not found (file path: {nlp_config.pattern_path})")
+            error_msg = (
+                f"File with patterns not found "
+                f"(file path: {nlp_config.pattern_path})"
+            )
+            raise NLPModelTrainError(message=error_msg)
 
         new_patterns = list()
         for pattern in patterns:
@@ -110,8 +118,8 @@ class NLPModelTrainer:
         @return patterns:
         """
         return any(
-            pattern["label"] == pattern_to_check["label"] and
-            pattern["pattern"] == pattern_to_check["pattern"]
+            pattern["label"] == pattern_to_check["label"]
+            and pattern["pattern"] == pattern_to_check["pattern"]
             for pattern in self._ruler.patterns
         )
 
@@ -136,7 +144,12 @@ class NLPModelTrainer:
                         doc_ = self._nlp.make_doc(text)
                         examples.append(Example.from_dict(doc_, annotations_))
 
-                    self._nlp.update(examples, drop=nlp_config.model_drop, losses=losses, sgd=self.optimizer)
+                    self._nlp.update(
+                        examples,
+                        drop=nlp_config.model_drop,
+                        losses=losses,
+                        sgd=self.optimizer,
+                    )
                 logger.info(f"Num iteration {n_iter + 1} — losses: {losses}")
 
             self._nlp.to_disk(nlp_config.output_dir_path)

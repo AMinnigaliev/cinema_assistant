@@ -1,7 +1,7 @@
 class SearchEngineError(Exception):
     """Базовый обработчик ошибок для IncomingVoiceSearchEngine."""
 
-    def __init__(self, message: str, code: int | str = "base-code-error") -> None:
+    def __init__(self, message: str, code: int | str = "base-code-error"):
         super().__init__(message)
         self.message = message
         self.code = code

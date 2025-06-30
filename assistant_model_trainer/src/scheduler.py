@@ -35,5 +35,8 @@ class NERModelScheduler:
         scheduler_ = AsyncIOScheduler()
 
         for job_ in cls.jobs():
-            scheduler_.add_job(func=job_["cls_job"]().run, **job_["job_params"])
+            scheduler_.add_job(
+                func=job_["cls_job"]().run,
+                **job_["job_params"],
+            )
             scheduler_.start()

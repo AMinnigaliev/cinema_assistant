@@ -3,7 +3,7 @@ from infi.clickhouse_orm.engines import MergeTree
 
 
 class VoiceAssistantRequestModel(Model):
-    """Модель данных - данных по входящему запросу для голосового ассистента."""
+    """Модель данных по входящему запросу."""
 
     __table__ = 'voice_assistant_request'
 
@@ -20,7 +20,7 @@ class VoiceAssistantRequestModel(Model):
 
 
 class NERTrainingData(Model):
-    """Модель данных - данные для обучения NER-модели на основе входящих запросов для голосового ассистента."""
+    """Модель данных для обучения NER-модели на основе входящих запросов."""
 
     __table__ = 'ner_training_data'
 
