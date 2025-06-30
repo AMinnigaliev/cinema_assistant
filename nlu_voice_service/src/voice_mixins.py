@@ -21,8 +21,15 @@ class STTMixin:
                 audio_data = recognizer.record(source)
 
                 try:
-                    text: str = recognizer.recognize_google(audio_data, language=config.language_recognize)
-                    logger.debug(f"[STT] text was gen, file_path={voice_data.incoming_voice_path}")
+                    text: str = recognizer.recognize_google(
+                        audio_data,
+                        language=config.language_recognize,
+                    )
+                    debug_msg = (
+                        f"[STT] text was gen, "
+                        f"file_path={voice_data.incoming_voice_path}"
+                    )
+                    logger.debug(debug_msg)
 
                     return text
 
@@ -30,22 +37,35 @@ class STTMixin:
                     logger.error(f"[STT] speech recognition failed: {ex}")
 
                 except sr.RequestError as ex:
-                    logger.error(f"[STT] speech recognition server error: {ex}")
+                    logger.error(
+                        f"[STT] speech recognition server error: {ex}"
+                    )
 
         return await asyncio.to_thread(recognize)
+
 
 class TTSMixin:
     """Mixin - text to speech операция."""
 
     @staticmethod
-    async def gen_tts(found_entities: dict[str, list[str]], user_id: str) -> tuple[str, str]:
+    async def gen_tts(
+        found_entities: dict[str, list[str]],
+        user_id: str,
+    ) -> tuple[str, str]:
         def generate():
             datetime_now = datetime.now().replace(microsecond=0).isoformat()
             output_file_name = f"out_{user_id}_{datetime_now}.mp3"
-            output_file_path = os.path.join(config.outgoing_file_path, output_file_name)
+            output_file_path = os.path.join(
+                config.outgoing_file_path,
+                output_file_name,
+            )
 
-            found_movies = ', '.join(found_entities.get(config.movie_label, []))
-            text = config.tts_response_template.format(found_movies=found_movies)
+            found_movies = ', '.join(
+                found_entities.get(config.movie_label, [])
+            )
+            text = config.tts_response_template.format(
+                found_movies=found_movies,
+            )
 
             try:
                 tts = gTTS(text=text, lang=config.language_tts)

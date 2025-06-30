@@ -5,7 +5,9 @@ __all__ = ["logger"]
 from .config import config
 
 
-def get_logger(log_format: str = "%(asctime)s - %(levelname)s - %(message)s") -> logging.Logger:
+def get_logger(
+    log_format: str = "%(asctime)s - %(levelname)s - %(message)s",
+) -> logging.Logger:
     logger_ = logging.getLogger()
     logger_.setLevel(logging.DEBUG)
 

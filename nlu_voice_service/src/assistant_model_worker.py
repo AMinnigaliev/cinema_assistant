@@ -23,17 +23,21 @@ class AssistantModelWorkerMixin:
 
             ent_by_types = dict()
             for ent in doc.ents:
-                if ent.label_ == config.movie_label and ent.text.lower().startswith("фильм "):
-                    offset = 1 if doc[ent.start].lower_ == "фильм" else 0  #  Смещение спана, для пропуска слова 'фильм'
+                is_movie_label = ent.label_ == config.movie_label
+                is_start_movie = ent.text.lower().startswith("фильм ")
+
+                if is_movie_label and is_start_movie:
+                    offset = 1 if doc[ent.start].lower_ == "фильм" else 0
 
                     # Проверка, в случае, если нет названия фильма
                     if offset and ent.start + offset < ent.end:
-                        new_ent = Span(doc, ent.start + offset, ent.end, label=ent.label)
-                        ent_by_types[ent.label_]= new_ent.text
+                        step = ent.start + offset
+                        new_ent = Span(doc, step, ent.end, label=ent.label)
+                        ent_by_types[ent.label_] = new_ent.text
 
                     break
 
-                elif ent.label_ == config.movie_label and not ent.text.lower().startswith("фильм "):
+                elif is_movie_label and not is_start_movie:
                     ent_by_types[ent.label_] = ent.text
                     break
 

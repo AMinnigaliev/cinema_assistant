@@ -21,10 +21,15 @@ class IncomingVoiceData(BaseVoiceData):
 
     def __init__(self, **data: Any):
         super().__init__(**data)
-        self.incoming_voice_path = os.path.join(config.incoming_file_path, self.incoming_voice_name)
+        self.incoming_voice_path = os.path.join(
+            config.incoming_file_path,
+            self.incoming_voice_name,
+        )
 
         if not os.path.exists(self.incoming_voice_path):
-            raise SearchEngineError(message=f"not found incoming file({self.incoming_voice_path})")
+            raise SearchEngineError(
+                message=f"not found incoming file({self.incoming_voice_path})",
+            )
 
 
 class OutgoingVoiceData(BaseVoiceData):
