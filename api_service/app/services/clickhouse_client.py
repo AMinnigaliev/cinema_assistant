@@ -56,6 +56,7 @@ async def insert_response(
         ],
     )
 
+
 async def get_voice_request(request_id: str) -> Optional[Any]:
     """
     Забирает из ClickHouse самую свежую запись по request_id.

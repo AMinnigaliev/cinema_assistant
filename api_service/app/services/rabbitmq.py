@@ -27,7 +27,8 @@ async def publish_voice_request(metadata: dict) -> None:
 
 
 async def start_response_consumer(on_response=None) -> None:
-    import asyncio, json
+    import asyncio
+    import json
     from app.services.clickhouse_client import insert_response
 
     conn = await get_rabbit_connect()
@@ -48,7 +49,8 @@ async def start_response_consumer(on_response=None) -> None:
         wav = settings.incoming_file_path / payload.get(
             "incoming_voice_path", ""
         )
-        if wav.is_file(): wav.unlink(missing_ok=True)
+        if wav.is_file():
+            wav.unlink(missing_ok=True)
 
     handler = on_response or _handler
 
@@ -58,4 +60,5 @@ async def start_response_consumer(on_response=None) -> None:
             await handler(payload)
 
     await queue.consume(_process, no_ack=False)
-    while True: await asyncio.sleep(3600)
+    while True:
+        await asyncio.sleep(3600)

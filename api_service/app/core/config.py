@@ -9,11 +9,17 @@ class Settings(BaseSettings):
     project_name: str = Field(default="movies", alias="PROJECT_NAME")
 
     # Файловая система
-    incoming_file_path: Path = Field(default=Path("/voice_files/incoming"), alias="INCOMING_FILE_PATH")
-    outgoing_file_path: Path = Field(default=Path("/voice_files/outgoing"), alias="OUTGOING_FILE_PATH")
+    incoming_file_path: Path = Field(
+        default=Path("/voice_files/incoming"), alias="INCOMING_FILE_PATH"
+    )
+    outgoing_file_path: Path = Field(
+        default=Path("/voice_files/outgoing"), alias="OUTGOING_FILE_PATH"
+    )
 
     # RabbitMQ
-    rabbitmq_connection_url: str | None = Field(default=None, alias="RABBITMQ_CONNECTION_URL")
+    rabbitmq_connection_url: str | None = Field(
+        default=None, alias="RABBITMQ_CONNECTION_URL"
+    )
     rabbitmq_user: str = Field(default="user", alias="RABBITMQ_USER")
     rabbitmq_password: str = Field(
         default="password", alias="RABBITMQ_PASS"
@@ -55,4 +61,4 @@ class Settings(BaseSettings):
         case_sensitive = False
 
 
-settings = Settings() 
+settings = Settings()
