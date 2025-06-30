@@ -74,8 +74,6 @@ services:
       context: ./assistant_model_trainer
     container_name: assistant_model_trainer
     env_file: .env
-    volumes:
-      - ./models/movie_ner_model:/app/movie_ner_model
     depends_on:
       nlp_clickhouse:
         condition: service_healthy
@@ -92,6 +90,7 @@ services:
       - rabbitmq
     volumes:
       - ./voice_files:/app/voice_files  # Монтированная директория для хранения голосовых аудиофайлов
+      - ./models/movie_ner_model:/app/movie_ner_model  # Монтированная директория для хранения рабочей nlu-модели
     networks:
       - sec_network
 
