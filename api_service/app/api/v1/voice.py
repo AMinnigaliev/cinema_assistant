@@ -2,16 +2,15 @@ from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import (APIRouter, BackgroundTasks, Depends, File, Form,
+from fastapi import (APIRouter, BackgroundTasks, File, Form,
                      HTTPException, status, UploadFile)
 from fastapi.responses import FileResponse
 
 from app.core.config import settings
-from app.dependencies.auth import get_current_user
 from app.services.clickhouse_client import get_voice_request
 from app.services.voice import send_to_voice_service
 
-router = APIRouter(prefix="/api/v1/voice", tags=["voice"])
+router = APIRouter(prefix="/voice", tags=["voice"])
 
 
 # ---------- POST /request ----------
@@ -24,7 +23,6 @@ async def handle_request(
     background_tasks: BackgroundTasks,
     audio: UploadFile = File(...),
     user_id: str = Form(...),
-    user=Depends(get_current_user),
 ):
     if audio.content_type not in ("audio/wav", "audio/x-wav"):
         raise HTTPException(415, "Unsupported audio format")
@@ -50,9 +48,10 @@ async def handle_request(
         200: {"description": "MP3 готов или статус обработки"},
         404: {"description": "Не найдено"},
     },
+
 )
-async def get_response(request_id: str, user=Depends(get_current_user)):
-    record = get_voice_request(request_id)
+async def get_response(request_id: str):
+    record = await get_voice_request(request_id)
     if not record:
         raise HTTPException(404, "Request not found")
 
