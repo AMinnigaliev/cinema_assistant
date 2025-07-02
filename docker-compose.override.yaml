@@ -8,3 +8,7 @@ services:
     ports:
       - "${RABBITMQ_AMQP_PORT}:5672"
       - "${RABBITMQ_WEB_INTERFACE_PORT}:15672"
+
+  redis:
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"

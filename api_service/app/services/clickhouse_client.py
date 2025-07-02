@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from app.db.clickhouse import get_clickhouse_client
 
@@ -36,7 +36,7 @@ async def insert_response(
     correlation_id: str,
     transcription: str,
     tts_file_path: str,
-    found_entities: Optional[Dict[str, Any]] = None,
+    found_entities: Dict[str, Any] | None = None,
 ) -> None:
     client = await get_clickhouse_client()
     client.execute(
@@ -57,7 +57,7 @@ async def insert_response(
     )
 
 
-async def get_voice_request(request_id: str) -> Optional[Any]:
+async def get_voice_request(request_id: str) -> dict | None:
     """
     Забирает из ClickHouse самую свежую запись по request_id.
     Возвращает dict с полями таблицы или None, если ничего не найдено.

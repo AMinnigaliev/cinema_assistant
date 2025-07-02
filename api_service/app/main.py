@@ -7,9 +7,10 @@ from fastapi.responses import ORJSONResponse
 from app.api.routes import router as api_router
 from app.core.config import settings
 from app.core.logger import LOGGING
-from app.db.clickhouse import init_clickhouse_client, get_clickhouse_client
+from app.db.clickhouse import get_clickhouse_client, init_clickhouse_client
 from app.db.rebbitmq import (close_rabbit, init_publish_channel,
                              init_rabbit_conn)
+from app.db.redis_client import get_redis_cache, init_redis_cache
 from app.services.rabbitmq import start_response_consumer
 
 logging.config.dictConfig(LOGGING)
@@ -31,7 +32,12 @@ async def on_startup() -> None:
     Событие запуска приложения: устанавливаем соединение и канал RabbitMQ,
     запускаем consumer.
     """
+    await init_redis_cache()
+    logger.info("Клиент Redis инициализирован.")
+
     await init_clickhouse_client()
+    logger.info("Клиент Clickhouse инициализирован.")
+
     await init_rabbit_conn()
     await init_publish_channel()
     asyncio.create_task(start_response_consumer())
@@ -45,7 +51,13 @@ async def shutdown():
     Событие остановки приложения: закрываем соединение с RabbitMQ.
     """
     await close_rabbit()
+    logger.info("Соединение с RabbitMQ закрыто.")
+
     client = await get_clickhouse_client()
     client.disconnect()
+    logger.info("Клиент Clickhouse закрыт.")
 
-    logger.info("Соединение с RabbitMQ закрыто. Приложение завершает работу.")
+    redis_cache = await get_redis_cache()
+    await redis_cache.close()
+
+    logger.info("Приложение завершает работу.")
