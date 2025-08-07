@@ -1,75 +1,75 @@
 @startuml
 !theme reddress-lightorange
-' Подключаем C4-PlantUML через includeurl
+' Include C4-PlantUML via includeurl
 !define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
 !includeurl C4P/C4_Container.puml
 
-' Клиентская часть
-Person(client, "Клиент", "Веб или Мобильное приложение")
+' Client side
+Person(client, "Client", "Web or Mobile application")
 
-' Серверная часть
+' Server side
 System_Boundary(backend, "Backend") {
-    ' Входная точка
-    Container(api_gateway, "API Gateway", "FastAPI", "Точка входа для всех запросов")
+    ' Entry point
+    Container(api_gateway, "API Gateway", "FastAPI", "Entry point for all requests")
 
-    ' Голосовой сервис
-    Container(nlu_voice_service, "NLU_Voice‑сервис", "Python", "STT → NLU → TTS + маршрутизация")
+    ' Voice service
+    Container(nlu_voice_service, "NLU_Voice Service", "Python", "STT → NLU → TTS + routing")
 
-    ' Сервис авторизации
-    Container(auth_service, "Auth‑сервис", "FastAPI", "Выдача и валидация токенов")
+    ' Auth service
+    Container(auth_service, "Auth Service", "FastAPI", "Token issuance and validation")
 
-    ' Сервис кинотеатра
-    Container(movies_service, "Movies‑сервис", "FastAPI", "Поиск контента кинотеатра")
+    ' Cinema content service
+    Container(movies_service, "Movies Service", "FastAPI", "Cinema content search")
 
-    ' Сервис ETL контента
-    Container(etl, "ETL‑сервис", "Python + Scheduler", "Синхронизация PostgreSQL → Elasticsearch")
+    ' ETL content service
+    Container(etl, "ETL Service", "Python + Scheduler", "Synchronization PostgreSQL → Elasticsearch")
 
-    ' Скедулер для обучения модели
-    Container(scheduler, "Assistant Model Trainer", "Python + Scheduler", "Периодическое обучение модели распознавания текста")
+    ' Scheduler for model training
+    Container(scheduler, "Assistant Model Trainer", "Python + Scheduler", "Periodic training of speech recognition model")
 
-    ' Очереди RabbitMQ для NLU
-    Container(queue_req, "RabbitMQ: requests", "Message Broker", "Очередь запросов в NLU")
-    Container(queue_res, "RabbitMQ: responses", "Message Broker", "Очередь ответов от NLU")
+    ' RabbitMQ queues for NLU
+    Container(queue_req, "RabbitMQ: requests", "Message Broker", "Queue for NLU requests")
+    Container(queue_res, "RabbitMQ: responses", "Message Broker", "Queue for NLU responses")
 
-    ' Хранилища данных
-    ContainerDb(redis, "Redis", "In‑memory KV Store", "Кеш контента и стейта токенов")
-    ContainerDb(postgres, "PostgreSQL", "Relational DB", "Хранение контента и пользователей")
-    ContainerDb(elastic, "Elasticsearch", "Search engine", "Поиск контента")
-    ContainerDb(clickhouse, "ClickHouse", "OLAP DB", "Хранение данных голосового поиска")
+    ' Data stores
+    ContainerDb(redis, "Redis", "In-memory KV Store", "Cache for content and token state")
+    ContainerDb(postgres, "PostgreSQL", "Relational DB", "Stores content and users")
+    ContainerDb(elastic, "Elasticsearch", "Search engine", "Content search")
+    ContainerDb(clickhouse, "ClickHouse", "OLAP DB", "Stores voice search data")
 }
 
-' Взаимодействия клиента
-Rel(client, api_gateway, "Голосовой запрос", "WebSocket")
+' Client interactions
+Rel(client, api_gateway, "Voice request", "WebSocket")
 
-' Взаимодействие API Gateway ↔ NLU по RabbitMQ
-Rel(api_gateway, queue_req, "Публикация запроса", "AMQP")
-Rel(queue_req, nlu_voice_service, "Получение запроса", "AMQP")
-Rel(nlu_voice_service, queue_res, "Публикация ответа", "AMQP")
-Rel(queue_res, api_gateway, "Получение ответа", "AMQP")
+' API Gateway ↔ NLU interaction via RabbitMQ
+Rel(api_gateway, queue_req, "Publish request", "AMQP")
+Rel(queue_req, nlu_voice_service, "Consume request", "AMQP")
+Rel(nlu_voice_service, queue_res, "Publish response", "AMQP")
+Rel(queue_res, api_gateway, "Consume response", "AMQP")
 
-' Проверка токена
-Rel(api_gateway, auth_service, "Проверка токена", "HTTP/REST")
+' Token validation
+Rel(api_gateway, auth_service, "Token validation", "HTTP/REST")
 
-' Логирование запросов
-Rel(api_gateway, clickhouse, "Запись логов голосового поиска", "ClickHouse SQL")
+' Voice search logging
+Rel(api_gateway, clickhouse, "Write voice search logs", "ClickHouse SQL")
 
-' Взаимодействие NLU ↔ Movies
-Rel(nlu_voice_service, movies_service, "Поиск контента", "HTTP/JSON")
+' NLU ↔ Movies interaction
+Rel(nlu_voice_service, movies_service, "Content search", "HTTP/JSON")
 
-' Загрузка и обучение модели
-Rel(scheduler, clickhouse, "Загрузка обучающих данных", "ClickHouse SQL")
-Rel(scheduler, nlu_voice_service, "Обучение модели", "HTTP/JSON")
+' Model loading and training
+Rel(scheduler, clickhouse, "Load training data", "ClickHouse SQL")
+Rel(scheduler, nlu_voice_service, "Train model", "HTTP/JSON")
 
-' Подсистема movies
-Rel(movies_service, redis, "Кеш контента", "Redis protocol")
-Rel(movies_service, elastic, "Полнотекстовый поиск", "HTTP/JSON")
+' Movies subsystem
+Rel(movies_service, redis, "Content cache", "Redis protocol")
+Rel(movies_service, elastic, "Full-text search", "HTTP/JSON")
 
-' Подсистема auth
-Rel(auth_service, redis, "Состояние токенов", "Redis protocol")
-Rel(auth_service, postgres, "CRUD пользователей", "SQLAlchemy Async")
+' Auth subsystem
+Rel(auth_service, redis, "Token state", "Redis protocol")
+Rel(auth_service, postgres, "User CRUD", "SQLAlchemy Async")
 
-' Подсистема ETL
-Rel(etl, postgres, "Чтение контента", "SQLAlchemy Async")
-Rel(etl, elastic, "Индексация контента", "Async HTTP/Batch")
+' ETL subsystem
+Rel(etl, postgres, "Read content", "SQLAlchemy Async")
+Rel(etl, elastic, "Index content", "Async HTTP/Batch")
 
 @enduml
