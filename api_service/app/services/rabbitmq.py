@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging.config
 
@@ -6,6 +7,7 @@ from aio_pika import DeliveryMode, IncomingMessage, Message
 from app.core.config import settings
 from app.core.logger import LOGGING
 from app.db.rebbitmq import get_rabbit_connect, get_rabbit_publish_channel
+from app.services.clickhouse_client import insert_response
 
 logging.config.dictConfig(LOGGING)
 logger = logging.getLogger(__name__)
@@ -14,9 +16,7 @@ logger = logging.getLogger(__name__)
 async def publish_voice_request(metadata: dict) -> None:
     """Шлём сообщение в очередь «voice_assistant_request»."""
     ch = await get_rabbit_publish_channel()
-    queue = await ch.declare_queue(
-        settings.rabbitmq_request_queue, durable=True
-    )
+    queue = await ch.declare_queue(settings.rabbitmq_request_queue)
     await ch.default_exchange.publish(
         Message(
             body=json.dumps(metadata, ensure_ascii=False).encode(),
@@ -27,15 +27,9 @@ async def publish_voice_request(metadata: dict) -> None:
 
 
 async def start_response_consumer(on_response=None) -> None:
-    import asyncio
-    import json
-    from app.services.clickhouse_client import insert_response
-
     conn = await get_rabbit_connect()
     ch = await conn.channel()
-    queue = await ch.declare_queue(
-        settings.rabbitmq_response_queue, durable=True
-    )
+    queue = await ch.declare_queue(settings.rabbitmq_response_queue)
 
     async def _handler(payload):
         await insert_response(
