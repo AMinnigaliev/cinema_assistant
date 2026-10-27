@@ -1,3 +1,4 @@
+```plantuml
 @startuml
 !theme reddress-lightorange
 ' Include C4-PlantUML via includeurl
@@ -38,8 +39,8 @@ System_Boundary(backend, "Backend") {
     ContainerDb(clickhouse, "ClickHouse", "OLAP DB", "Stores voice search data")
 }
 
-' Client interactions
-Rel(client, api_gateway, "Voice request", "WebSocket")
+' Client ↔ API Gateway
+Rel(client, api_gateway, "Voice interaction", "HTTPS/REST")
 
 ' API Gateway ↔ NLU interaction via RabbitMQ
 Rel(api_gateway, queue_req, "Publish request", "AMQP")
@@ -73,3 +74,4 @@ Rel(etl, postgres, "Read content", "SQLAlchemy Async")
 Rel(etl, elastic, "Index content", "Async HTTP/Batch")
 
 @enduml
+```

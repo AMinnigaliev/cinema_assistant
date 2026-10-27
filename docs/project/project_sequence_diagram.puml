@@ -1,0 +1,134 @@
+@startuml
+' Sequence diagram based on the source code in c_a.zip
+hide footbox
+autonumber
+skinparam responseMessageBelowArrow true
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 18
+skinparam BoxPadding 10
+
+actor "Клиент\n(браузер / приложение)" as Client
+participant "Nginx\nreverse proxy" as Nginx
+participant "API Service\nFastAPI" as API
+database "Redis\n(API token cache)" as RedisAPI
+participant "Auth Service\nFastAPI" as Auth
+database "Redis\n(revoked tokens)" as RedisAuth
+database "ClickHouse\nvoice_assistant_request" as CH
+queue "RabbitMQ" as RMQ
+participant "NLU Voice Service\nRPC consumer" as NLU
+participant "Google Speech Recognition\n(external STT)" as STT
+participant "Movies Service\nFastAPI" as Movies
+database "Redis\n(movie cache where used)" as RedisMovies
+database "Elasticsearch\nfilm_work index" as ES
+collections "Shared voice_files volume" as Files
+participant "Google TTS\n(gTTS external service)" as TTS
+
+== Submit voice request ==
+Client -> Nginx: POST /api/v1/voice/request\n(audio/wav, Bearer token)
+Nginx -> API: proxy POST /api/v1/voice/request
+API -> RedisAPI: GET token:<JWT>
+alt token cached
+  RedisAPI --> API: cached payload
+else cache miss / cache read error
+  API -> Auth: POST /api/v1/auth/validate\nAuthorization: Bearer <JWT>
+  Auth -> RedisAuth: check token revocation
+  RedisAuth --> Auth: revocation result
+  Auth -> Auth: verify JWT
+  Auth --> API: token payload (user_id, role, exp)
+  opt API token cache can be written
+    API -> RedisAPI: SET token:<JWT> with TTL
+  end
+end
+
+API -> API: validate audio content type\ncreate request_id and save WAV
+API -> Files: write incoming WAV\n(incoming/<filename>.wav)
+API --> Client: 202 Accepted\n{request_id, status: processing}
+
+note over API,RMQ
+FastAPI BackgroundTask continues after the 202 response.
+end note
+API -> CH: INSERT request row\nstatus=queued, IDs and STT file path
+API -> RMQ: publish persistent JSON request\nrequest_id, user_id, incoming_voice_name\nAMQP correlation_id + reply_to
+
+== Process voice request asynchronously ==
+RMQ -> NLU: deliver voice_assistant_request
+NLU -> NLU: validate IncomingVoiceData\nand resolve incoming file path
+NLU -> Files: read incoming WAV
+NLU -> STT: recognize_google(audio, language=ru-RU)
+STT --> NLU: recognized text (or no text)
+NLU -> NLU: spaCy NER extracts MOVIE entity
+
+alt MOVIE entity extracted
+  NLU -> Movies: GET /api/v1/movies/films/search\n?query=...&page_size=3&page_number=1\nheader x-request-id
+  Movies -> ES: search film_work by title\n(multi_match, fuzziness=AUTO)
+  ES --> Movies: matching films
+  Movies --> NLU: JSON list of films
+  alt at least one film found
+    NLU -> TTS: gTTS(text with film titles, lang=ru)
+    TTS --> NLU: generated MP3 saved to shared volume
+    NLU -> Files: write outgoing MP3
+  else no film found / search returned empty
+    NLU -> NLU: use not-found response text/audio
+    opt not-found audio file does not exist
+      NLU -> TTS: gTTS(not-found text)
+      TTS --> NLU: generated audio file
+      NLU -> Files: write not-found audio file
+    end
+  end
+else no MOVIE entity / no recognized text
+  NLU -> NLU: use not-found response text/audio
+  opt not-found audio file does not exist
+    NLU -> TTS: gTTS(not-found text)
+    TTS --> NLU: generated audio file
+    NLU -> Files: write not-found audio file
+  end
+end
+
+NLU -> Files: delete incoming WAV
+NLU -> RMQ: publish response to reply_to queue\nrequest_id, user_id, output_voice_path, out_text\nAMQP correlation_id copied from request
+RMQ -> API: deliver voice_assistant_response
+API -> API: validate response fields
+alt response has required fields
+  API -> CH: INSERT result row\nstatus=done, transcription, tts_file_path
+else response contains error or required fields missing
+  API -> API: log error; do not insert done row
+end
+
+== Client polls for result ==
+loop Client repeats GET until status is done
+  Client -> Nginx: GET /api/v1/voice/response?request_id=...
+  Nginx -> API: proxy GET /api/v1/voice/response
+  API -> RedisAPI: GET token:<JWT>
+  alt token cached
+    RedisAPI --> API: cached payload
+  else cache miss / cache read error
+    API -> Auth: POST /api/v1/auth/validate
+    Auth -> RedisAuth: check revocation and validate JWT
+    RedisAuth --> Auth: revocation result
+    Auth --> API: token payload
+    opt API token cache can be written
+      API -> RedisAPI: SET token:<JWT> with TTL
+    end
+  end
+  API -> CH: SELECT latest row by request_id
+  CH --> API: latest request/result record or no row
+  alt no record
+    API --> Client: 404 Request not found
+  else status is not done
+    API --> Client: JSON {status: queued/processing}
+  else status is done and file exists
+    API -> Files: check tts_file_path exists
+    Files --> API: file exists
+    API --> Nginx: FileResponse (audio/mpeg)
+    Nginx --> Client: MP3/audio response
+  else status is done but file missing
+    API --> Client: 404 File not found on disk
+  end
+end
+
+note over API,Files
+API and NLU share ./voice_files mounted at /app/voice_files.
+API periodically removes outgoing *.mp3 files older than 24 hours.
+end note
+
+@enduml

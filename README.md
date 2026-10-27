@@ -54,6 +54,12 @@ docker compose -f ./docker-compose-apps.yaml -f ./docker-compose-services.yaml -
 Project architecture diagram:  
 ![scheme](docs/project/project_scheme.png)
 
+<details>
+  <summary>🔍 View the full process sequence diagram (Sequence Diagram)</summary>
+  
+  ![project_sequence_diagram](docs/project/project_sequence_diagram.png)
+</details>
+
 ## Main PostgreSQL Models
 - **FilmWork** – Movie  
 - **Genre** – Genre  
@@ -86,9 +92,6 @@ PostgreSQL schema diagrams:
 ## REST-URI:
 ### Versioning:
 - **Stripe**-style versioning ([docs](https://docs.stripe.com/api/versioning))  
-
-### WebSocket event naming patterns:
-TODO: add
 
 ## Code Style:
 - Follow **[PEP8](https://peps.python.org/pep-0008/)**  
