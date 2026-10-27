@@ -87,16 +87,16 @@ class AuthService:
         self, token: str, is_exp_important: bool = False
     ) -> dict:
         """
-        Проверяет токен с использованием кеша через auth-сервис или локально
-        (если не получается через auth-сервис).
+        Проверяет токен через кеш, auth-сервис или локально
+        (если другие проверки недоступны, но доступ к данным не такой
+        критичный).
         """
         cache_key = f"token:{token}"
 
-        message = f"Проверяем наличие токена в кеше: key={cache_key}"
-        logger.info(message)
+        logger.info("Проверка токена: token=%s", token)
 
         try:
-            if cached := await self.redis_client.get(cache_key, message):
+            if cached := await self.redis_client.get(cache_key):
                 logger.info(
                     "Токен найден в кеше: key=%s value=%s", cache_key, cached
                 )
@@ -115,8 +115,20 @@ class AuthService:
         try:
             payload = await self.verify_token_through_auth(token)
 
+            logger.info(
+                "Токен проверен через auth-сервис: "
+                "token=%s payload=%s",
+                token, payload
+            )
+
         except HTTPException:
             payload = await self.varify_token_locally(token)
+
+            logger.info(
+                "Токен проверен локально (без кеша и auth-сервиса): "
+                "token=%s payload=%s",
+                token, payload
+            )
 
             if is_exp_important:
                 expire = payload.get("exp")
@@ -134,6 +146,11 @@ class AuthService:
                 cache_key, json.dumps(payload),
                 expire=expire,
             ))
+
+            logger.info(
+                "Токен успешно сохранён в кеше: key=%s, expire=%d.",
+                cache_key, expire
+            )
         return payload
 
 
@@ -151,7 +168,5 @@ def get_auth_service(
     :return: Экземпляр AuthService, который используется для
     проверки токена.
     """
-    logger.info(
-        "Создаётся экземпляр AuthService с использованием Redis."
-    )
+    logger.info("Создаётся экземпляр AuthService с использованием Redis.")
     return AuthService(redis)

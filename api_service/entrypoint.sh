@@ -13,4 +13,4 @@ if [ ! -f /app/.init_done ]; then
 fi
 
 echo "Запуск приложения..."
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+python3 run.py

@@ -26,7 +26,7 @@ async def send_to_voice_service(
         "user_id": user_id,
         "correlation_id": correlation_id,
         "reply_to": settings.rabbitmq_response_queue,
-        "incoming_voice_path": audio_path.name,
+        "incoming_voice_name": audio_path.name,
     }
 
     await publish_voice_request(metadata)

@@ -17,10 +17,10 @@ class Settings(BaseSettings):
 
     # Файловая система
     incoming_file_path: Path = Field(
-        default=Path("/voice_files/incoming"), alias="INCOMING_FILE_PATH"
+        default=Path("/app/voice_files/incoming"), alias="INCOMING_FILE_PATH"
     )
     outgoing_file_path: Path = Field(
-        default=Path("/voice_files/outgoing"), alias="OUTGOING_FILE_PATH"
+        default=Path("/app/voice_files/outgoing"), alias="OUTGOING_FILE_PATH"
     )
 
     # RabbitMQ
@@ -36,8 +36,10 @@ class Settings(BaseSettings):
     rabbitmq_request_queue: str = Field(
         default="voice_assistant_request", alias="RABBITMQ_INCOMING_QUEUE_NAME"
     )
-    rabbitmq_response_queue: str = "voice_assistant_response"
-    redis_db: int = Field(default=5, alias="REDIS_API_SERVICE")
+    rabbitmq_response_queue: str = Field(
+        default="voice_assistant_response",
+        alias="RABBITMQ_OUTGOING_QUEUE_NAME",
+    )
 
     # ClickHouse
     clickhouse_host: str = Field(
@@ -64,6 +66,7 @@ class Settings(BaseSettings):
     auth_service_port: int = Field(default=8000, alias="AUTH_SERVICE_PORT")
 
     # Redis
+    redis_db: int = Field(default=5, alias="REDIS_API_SERVICE")
     redis_host: str = Field(default="localhost", alias="REDIS_HOST")
     redis_port: int = Field(default=6379, alias="REDIS_PORT")
     redis_password: str = Field(default="password", alias="REDIS_PASSWORD")

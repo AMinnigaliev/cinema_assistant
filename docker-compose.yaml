@@ -26,8 +26,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./voice_files/incoming:/voice_files/incoming
-      - ./voice_files/outgoing:/voice_files/outgoing
+      - ./voice_files:/app/voice_files
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -42,7 +41,8 @@ services:
     restart: unless-stopped
     expose:
       - "${AUTH_SERVICE_PORT}"
-      - AUTH_SERVICE_URL=http://auth_service:${AUTH_SERVICE_PORT}
+    environment:
+      AUTH_SERVICE_URL: "http://auth_service:${AUTH_SERVICE_PORT}"
     depends_on:
       redis:
         condition: service_healthy
@@ -197,9 +197,9 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
-    ports:
-      - "${RABBITMQ_AMQP_PORT}:5672"
-      - "${RABBITMQ_WEB_INTERFACE_PORT}:15672"
+    expose:
+      - "5672"
+      - "15672"
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS}

@@ -6,10 +6,12 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt --no-cache-dir
 
 COPY app ./app
-COPY entrypoint.sh ./
+COPY run.py .
+COPY entrypoint.sh .
 
 RUN chmod +x ./entrypoint.sh
 

@@ -33,13 +33,13 @@ class CacheService:
 
         else:
             if value is not None:
-                logger.info(
+                logger.debug(
                     "Ключ найден в кеше: key=%s. %s",
                     key, log_info
                 )
                 return value
 
-            logger.info("Ключ отсутствует в кеше: key=%s. %s", key, log_info)
+            logger.debug("Ключ отсутствует в кеше: key=%s. %s", key, log_info)
 
             return None
 
@@ -67,7 +67,7 @@ class CacheService:
             raise CacheServiceError(e)
 
         else:
-            logger.info(
+            logger.debug(
                 "Значение успешно сохранено в кеше: key=%s, expire=%d. %s",
                 key, expire, log_info
             )

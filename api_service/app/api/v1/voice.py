@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
@@ -11,7 +11,7 @@ from app.dependencies import get_current_user
 from app.services.clickhouse_client import get_voice_request
 from app.services.voice import send_to_voice_service
 
-router = APIRouter(prefix="/voice", tags=["voice"])
+router = APIRouter(tags=["voice"])
 
 
 # ---------- POST /request ----------
@@ -32,7 +32,7 @@ async def handle_request(
 
     user_id = payload['user_id']
     req_id = str(uuid4())
-    iso_ts = datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")
+    iso_ts = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S")
     dst_path: Path = settings.incoming_file_path / f"in_{req_id}_{iso_ts}.wav"
     dst_path.parent.mkdir(parents=True, exist_ok=True)
     dst_path.write_bytes(await audio.read())
@@ -62,7 +62,8 @@ async def get_response(request_id: str) -> FileResponse:
         # Пока идёт обработка
         return {"status": record["status"]}
 
-    tts_path = settings.outgoing_file_path / record["tts_file_path"]
+    tts_path = Path(record["tts_file_path"])
+
     if not tts_path.exists():
         raise HTTPException(404, "File not found on disk")
 
